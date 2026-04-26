@@ -4,15 +4,38 @@ import { ThemeProvider } from './components/ThemeProvider'
 import TypewriterTitle from './components/TypewriterTitle'
 
 export const metadata: Metadata = {
-  title: 'reokiy • links',
-  description: 'VRChat content creator • your fav lewd elf',
+  title: {
+    default: 'reokiy • links',
+    template: '%s • reokiy',
+  },
+  description: 'reokiy — VRChat content creator, lewd elf, avatar maker. Links, socials, and more.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://reokiy.vercel.app'),
+  keywords: ['reokiy', 'VRChat', 'content creator', 'femboy', 'avatar', 'fansly', 'linktree'],
+  authors: [{ name: 'reokiy' }],
+  creator: 'reokiy',
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    title: 'reokiy • links',
+    description: 'VRChat content creator • your fav lewd elf',
+    siteName: 'reokiy',
+    images: [{ url: '/images/logo.png', width: 400, height: 400, alt: 'reokiy' }],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'reokiy • links',
+    description: 'VRChat content creator • your fav lewd elf',
+    creator: '@Reoki14',
+    images: ['/images/logo.png'],
+  },
   icons: {
     icon: '/images/logo.png',
     apple: '/images/logo.png',
   },
-  openGraph: {
-    title: 'reokiy • links',
-    description: 'VRChat content creator • your fav lewd elf',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
   },
 }
 
