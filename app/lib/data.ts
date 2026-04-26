@@ -58,7 +58,7 @@ export interface Stats {
 
 export function computeStats(visits: Visit[]): Stats {
   const pageCount = new Map<string, number>()
-  const countryCount = new Map<string, { name: string; code: string; count: number }>()
+  const countryCount = new Map<string, { country: string; code: string; count: number }>()
   const ipSet = new Set<string>()
   const dayCount = new Map<string, number>()
   const refCount = new Map<string, number>()
@@ -71,7 +71,7 @@ export function computeStats(visits: Visit[]): Stats {
     if (v.ip) ipSet.add(v.ip)
     if (v.country && v.countryCode) {
       const cur = countryCount.get(v.countryCode)
-      countryCount.set(v.countryCode, { name: v.country, code: v.countryCode, count: (cur?.count ?? 0) + 1 })
+      countryCount.set(v.countryCode, { country: v.country, code: v.countryCode, count: (cur?.count ?? 0) + 1 })
     }
     if (v.referrer && v.referrer !== '') {
       try {
@@ -101,7 +101,7 @@ export function computeStats(visits: Visit[]): Stats {
     total: visits.length,
     unique: ipSet.size,
     topPage: byPage[0]?.page ?? '/',
-    topCountry: byCountry[0]?.name ?? '—',
+    topCountry: byCountry[0]?.country ?? '—',
     topCountryCode: byCountry[0]?.code ?? '',
     byPage,
     byCountry,
