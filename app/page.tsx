@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import ParticlesBg from './components/ParticlesBg'
 import DiscordStatus from './components/DiscordStatus'
-import Carousel from './components/Carousel'
+import AboutMeModal from './components/AboutMeModal'
 import { useDiscord } from './hooks/useDiscord'
 
 /* ─── Icons ──────────────────────────────────────────────── */
@@ -37,75 +37,6 @@ const LINKS = [
   { label: 'fansly', sublabel: '18+ content ♥', href: 'https://fansly.com/Reokiy/posts', icon: 'Fansly' as const, accent: '#e8195c' },
 ]
 
-/* ─── About Me sub-components ────────────────────────────── */
-const STICKER_ANIM = [
-  { dur: 3.2, delay: 0.0 }, { dur: 4.1, delay: 0.7 },
-  { dur: 3.7, delay: 0.3 }, { dur: 4.5, delay: 1.1 },
-  { dur: 3.0, delay: 0.5 }, { dur: 4.8, delay: 0.2 },
-]
-
-function Sticker({ src, alt, idx = 0, style }: { src: string; alt: string; idx?: number; style?: React.CSSProperties }) {
-  const a = STICKER_ANIM[idx % STICKER_ANIM.length]
-  return (
-    <img src={src} alt={alt} style={{
-      width: 56, height: 56, objectFit: 'contain',
-      filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.4))',
-      animation: `float ${a.dur}s ease-in-out infinite`,
-      animationDelay: `${a.delay}s`, ...style,
-    }} />
-  )
-}
-
-function SectionHeader({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-      <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, var(--glass-border))' }} />
-      <h2 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 13, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--pink)', whiteSpace: 'nowrap' }}>
-        {children}
-      </h2>
-      <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, var(--glass-border), transparent)' }} />
-    </div>
-  )
-}
-
-const GAMES = [
-  { emoji: '🌐', game: 'VRChat', description: 'My cozy home', sticker: 1 },
-  { emoji: '⚔️', game: 'The Outlast Trials', description: 'I never got raped so many times in a row', sticker: 2 },
-  { emoji: '🏝️', game: 'Terraria', description: 'Its cool', sticker: 3 },
-  { emoji: '🧱', game: 'Unity', description: 'Im a masoquist, i love it (+200 avis and 3 worlds)', sticker: 4 },
-  { emoji: '🌸', game: '7 Days To Die', description: 'I love my basy', sticker: 5 },
-  { emoji: '🎯', game: 'Phasmophobia', description: 'The ghost are afraid of me', sticker: 6 },
-]
-
-function GameCard({ emoji, game, description, sticker }: { emoji: string; game: string; description: string; sticker: number }) {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 14,
-        padding: '12px 16px',
-        background: hovered ? 'rgba(var(--primary-rgb),0.08)' : 'var(--glass)',
-        border: `1px solid ${hovered ? 'rgba(var(--primary-rgb),0.4)' : 'var(--glass-border)'}`,
-        borderRadius: 14, transition: 'all 0.25s ease',
-        transform: hovered ? 'translateX(4px)' : 'none', cursor: 'default',
-      }}
-    >
-      <div style={{ width: 44, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.3s ease', transform: hovered ? 'scale(1.2) rotate(-5deg)' : 'scale(1)' }}>
-        {sticker > 0
-          ? <img src={`/emojis/reokichan 56 ${sticker}.png`} alt={game} style={{ width: 44, height: 44, objectFit: 'contain' }} />
-          : <span style={{ fontSize: 32 }}>{emoji}</span>
-        }
-      </div>
-      <div>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text)', letterSpacing: '0.06em' }}>{game}</div>
-        <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{description}</div>
-      </div>
-      <div style={{ marginLeft: 'auto', fontSize: 20, opacity: hovered ? 1 : 0, transition: 'opacity 0.2s ease' }}>{emoji}</div>
-    </div>
-  )
-}
 
 interface Star { id: number; top: string; left: string; size: number; delay: number; duration: number }
 
@@ -113,7 +44,7 @@ interface Star { id: number; top: string; left: string; size: number; delay: num
 export default function Home() {
   const [hoveredLink, setHoveredLink] = useState<number | null>(null)
   const [stars, setStars] = useState<Star[]>([])
-  const [activeStickerIdx, setActiveStickerIdx] = useState(0)
+  const [aboutOpen, setAboutOpen] = useState(false)
   const { avatarUrl } = useDiscord()
 
   useEffect(() => {
@@ -125,8 +56,6 @@ export default function Home() {
       delay: Math.random() * 4,
       duration: Math.random() * 3 + 2,
     })))
-    const interval = setInterval(() => setActiveStickerIdx(i => (i + 1) % 6), 1200)
-    return () => clearInterval(interval)
   }, [])
 
   return (
@@ -241,9 +170,9 @@ export default function Home() {
             })}
           </div>
 
-          {/* Scroll to about */}
+          {/* About me — opens modal */}
           <button
-            onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
+            onClick={() => setAboutOpen(true)}
             className="aboutme-pill"
             style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
@@ -254,132 +183,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ═══════════════ ABOUT ME SECTION ═══════════════════ */}
-      <section id="about" style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '60px 20px 80px', position: 'relative' }}>
-        <div style={{ width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', gap: 0 }}>
-
-          {/* Sticker showcase */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-            {[1,2,3,4,5,6].map((v, i) => (
-              <img key={v} src={`/emojis/reokichan 56 ${v}.png`} alt={`reokichan ${v}`} style={{
-                width: 44, height: 44, objectFit: 'contain',
-                opacity: activeStickerIdx === i ? 1 : 0.3,
-                transform: activeStickerIdx === i ? 'scale(1.3) translateY(-4px)' : 'scale(1)',
-                transition: 'all 0.35s cubic-bezier(0.34,1.56,0.64,1)',
-                filter: activeStickerIdx === i ? 'drop-shadow(0 0 8px rgba(var(--pink-rgb),0.6))' : 'none',
-              }} />
-            ))}
-          </div>
-
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px,9vw,48px)', fontWeight: 600, fontStyle: 'italic', background: 'linear-gradient(90deg, var(--text) 0%, var(--pink) 50%, var(--text) 100%)', backgroundSize: '200% auto', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', animation: 'shimmer 4s linear infinite', textAlign: 'center', marginBottom: 8 }}>
-            about reokiy
-          </h2>
-          <p style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.6, textAlign: 'center', marginBottom: 28 }}>
-            Hewooo~ Im Reokiy ♥
-          </p>
-
-          {/* Who I am */}
-          <div className="card" style={{ marginBottom: 16 }}>
-            <SectionHeader>Who I Am</SectionHeader>
-            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-              <p style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 15, color: 'rgba(var(--text-rgb,254,240,244),0.88)', lineHeight: 1.8, flex: 1 }}>
-                Hewooo. I&apos;m <strong style={{ color: 'var(--pink)', fontStyle: 'normal' }}>Reokiy</strong>, also known as Lucy. I&apos;m 21 and a femboy who loves creating NSFW content~ 🌐
-                <br /><br />
-                I love making people happy and laughing with them, and I love being around them as a silly gremlin elf :3
-                <br /><br />
-                I also love Unity and create all my avatars myself. If anyone needs help, I&apos;m happy to help!~ ✨
-                <br /><br />
-                I have my own Discord server to stay up to date — please join to keep updated! tehehe :3
-              </p>
-              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[1, 4].map((v, i) => <Sticker key={v} idx={i} src={`/emojis/reokichan 56 ${v}.png`} alt="reokichan sticker" />)}
-              </div>
-            </div>
-          </div>
-
-          {/* What I do */}
-          <div className="card" style={{ marginBottom: 16 }}>
-            <SectionHeader>What i do</SectionHeader>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                { icon: '🌐', title: 'VRChat content', desc: 'i like to experiment with a lot of types of content' },
-                { icon: '📸', title: 'Pictures', desc: 'I really love making pictures as a cute elf' },
-                { icon: '💬', title: 'Discord and Yapping', desc: 'I really love my dc server and to be yapping arround there' },
-                { icon: '🔞', title: 'Lewd Content', desc: '18+ on fansly, but keep it as our secret~' },
-              ].map(({ icon, title, desc }) => (
-                <div key={title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid var(--glass-border)' }}>
-                  <span style={{ fontSize: 24, flexShrink: 0, lineHeight: 1 }}>{icon}</span>
-                  <div>
-                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text)', letterSpacing: '0.06em', marginBottom: 2 }}>{title}</div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 13, color: 'var(--text-muted)' }}>{desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Timeline */}
-          <div className="card" style={{ marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
-            <SectionHeader>How did i started</SectionHeader>
-            <div style={{ position: 'absolute', right: -20, top: -20, opacity: 0.08, pointerEvents: 'none' }}>
-              <img src="/emojis/reokichan 112 3.png" alt="" style={{ width: 100, height: 100, objectFit: 'contain' }} />
-            </div>
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              {[
-                { year: '2020', text: 'I started creating NSFW content with a Koikatsu character I made before I found VRchat. I enjoyed making them.' },
-                { year: '2022', text: 'After that, I found VRchat and started off simple with some pictures.' },
-                { year: '2024', text: 'After that, I made Pornhub videos and got my first followers and likes.' },
-                { year: 'Today', text: 'Since then, I have stopped making Pornhub videos and started focusing more on my content on X/Twitter, Bluesky and Fansly.' },
-              ].map(({ year, text }, i, arr) => (
-                <div key={i} style={{ display: 'flex', gap: 14, marginBottom: i < arr.length - 1 ? 16 : 0 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(var(--primary-rgb),0.15)', border: '1px solid rgba(var(--primary-rgb),0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-body)', fontSize: 8, color: 'var(--pink)', letterSpacing: '0.05em', flexShrink: 0 }}>
-                      {year}
-                    </div>
-                    {i < arr.length - 1 && <div style={{ width: 1, flex: 1, background: 'var(--glass-border)', minHeight: 16, marginTop: 4 }} />}
-                  </div>
-                  <p style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 14, color: 'rgba(254,240,244,0.82)', lineHeight: 1.7, paddingTop: 8 }}>{text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Games */}
-          <div className="card" style={{ marginBottom: 16 }}>
-            <SectionHeader>Games I Play</SectionHeader>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {GAMES.map(g => <GameCard key={g.game} {...g} />)}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
-              {[1,2,3,4,5,6].map(v => (
-                <img key={v} src={`/emojis/reokichan 28 ${v}.png`} alt={`sticker ${v}`} style={{ width: 28, height: 28, objectFit: 'contain', animation: `float ${2.5 + v * 0.3}s ease-in-out infinite`, animationDelay: `${v * 0.2}s`, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.3))' }} />
-              ))}
-            </div>
-          </div>
-
-          {/* Gallery */}
-          <div className="card" style={{ marginBottom: 16, padding: '20px 20px 12px' }}>
-            <SectionHeader>galería</SectionHeader>
-            <div style={{ margin: '0 -20px -12px' }}>
-              <Carousel autoPlay interval={4000} />
-            </div>
-          </div>
-
-          {/* Fun facts */}
-          <div className="card" style={{ marginBottom: 32 }}>
-            <SectionHeader>fun facts</SectionHeader>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {['🌙 Gooning final boss','🎧 Always With Music','🩷 Elf Supremacy','🥺 Quite Sensible','☕ I require caffeine','🌸 world collectionist','😭 I laugh about the problems','✨ I belive in gooning god'].map(fact => (
-                <span key={fact} style={{ fontFamily: 'var(--font-body)', fontSize: 10, letterSpacing: '0.08em', padding: '6px 12px', borderRadius: 999, background: 'var(--glass)', border: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
-                  {fact}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="footer-text">reokiy • your lewd dumb elf 🖤</div>
-        </div>
-      </section>
+      <AboutMeModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </main>
   )
 }
