@@ -31,6 +31,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!mounted) return
+    // Preload bg image to avoid blank-on-reload
+    const existing = document.querySelector('link[data-bg-preload]')
+    if (existing) existing.remove()
+    const link = document.createElement('link')
+    link.rel = 'preload'
+    link.as = 'image'
+    link.href = palette.bg
+    link.setAttribute('data-bg-preload', '1')
+    document.head.appendChild(link)
+
     const r = document.documentElement
     r.style.setProperty('--primary', palette.primary)
     r.style.setProperty('--primary-dim', palette.primaryDim)
