@@ -96,15 +96,16 @@ export function useDiscord() {
       }?size=256`
     : null
 
-  useEffect(() => {
-    if (avatarUrl) { try { localStorage.setItem(CACHE_KEY, avatarUrl) } catch {} }
-  }, [avatarUrl])
+  const [cachedAvatarUrl, setCachedAvatarUrl] = useState<string | null>(null)
 
-  const cachedAvatarUrl =
-    avatarUrl ??
-    (typeof window !== 'undefined'
-      ? (() => { try { return localStorage.getItem(CACHE_KEY) } catch { return null } })()
-      : null)
+  useEffect(() => {
+    if (avatarUrl) {
+      try { localStorage.setItem(CACHE_KEY, avatarUrl) } catch {}
+      setCachedAvatarUrl(avatarUrl)
+    } else {
+      try { setCachedAvatarUrl(localStorage.getItem(CACHE_KEY)) } catch {}
+    }
+  }, [avatarUrl])
 
   return { data, error, loading, avatarUrl: cachedAvatarUrl }
 }
