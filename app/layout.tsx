@@ -1,28 +1,35 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { ThemeProvider } from './components/ThemeProvider'
+import TypewriterTitle from './components/TypewriterTitle'
 
 export const metadata: Metadata = {
-  title: 'sweetie • links',
-  description: 'VRChat content creator • your fav alter',
+  title: 'reokiy • links',
+  description: 'VRChat content creator • your fav lewd elf',
+  icons: {
+    icon: '/images/logo.png',
+    apple: '/images/logo.png',
+  },
   openGraph: {
-    title: 'sweetie • links',
-    description: 'VRChat content creator • your fav alter',
+    title: 'reokiy • links',
+    description: 'VRChat content creator • your fav lewd elf',
   },
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="icon" href="/images/logo.png" type="image/png" />
       </head>
-      <body style={{ position: 'relative', zIndex: 1 }}>
-        {children}
+      <body>
+        <ThemeProvider>
+          <TypewriterTitle />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )
