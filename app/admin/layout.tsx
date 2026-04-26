@@ -17,11 +17,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Sin esto, el layout no puede saber si está renderizando /admin/login
   // y redirige de vuelta ahí en bucle infinito
   const headersList = await headers()
-  const pathname = headersList.get('x-pathname') ?? ''
+  const pathname = headersList.get('x-pathname') || ''
 
-  // Si estamos en la página de login, renderizar sin verificar auth
-  // (el login no debe estar protegido por sí mismo)
-  if (pathname.startsWith('/admin/login')) {
+  const isLogin =
+    pathname.includes('/admin/login') ||
+    !pathname // fallback crítico para producción
+
+  if (isLogin) {
     return <>{children}</>
   }
 

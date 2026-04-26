@@ -223,6 +223,19 @@
       "isNew": false,
       "id": "08c5e84f-f559-4141-acc5-a89045ea965c",
       "duration": 31
+    },
+    {
+      "page": "/",
+      "timestamp": "2026-04-26T21:00:48.721Z",
+      "ip": "::ffff:127.0.0.1",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0",
+      "browser": "Firefox",
+      "os": "Windows",
+      "device": "desktop",
+      "sessionId": "f46b1d1a-68c0-412b-a435-7b069a230f40",
+      "isNew": false,
+      "id": "650328e1-031f-4a3c-9be8-9d50b52bf10c",
+      "duration": 14
     }
   ]
 }
