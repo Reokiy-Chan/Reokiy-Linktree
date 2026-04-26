@@ -1,237 +1,281 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell,
 } from 'recharts'
+import KPICard from './components/KPICard'
 import type { Stats } from '@/app/lib/data'
 
-const TT = { background: 'rgba(5,0,7,0.97)', border: '1px solid rgba(196,20,40,0.35)', borderRadius: 8, fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#fee0f4', padding: '6px 10px' }
-const S: React.CSSProperties = { fontFamily: 'var(--font-body)' }
-const PIE_COLORS = ['#c41428', '#e8195c', '#ff5fa0', '#ff8030', '#a0004a', '#7a0020']
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const DAYS_SHORT = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+const TT: CSSProperties = {
+  background: 'rgba(5,0,7,0.97)',
+  border: '1px solid rgba(196,20,40,0.35)',
+  borderRadius: 8,
+  fontFamily: 'Space Mono, monospace',
+  fontSize: 10,
+  color: '#fee0f4',
+  padding: '6px 10px',
+}
+
+const S: CSSProperties = { fontFamily: 'var(--font-body)' }
+
+const AXIS_TICK = {
+  fontSize: 8,
+  fill: 'rgba(254,240,244,0.3)',
+} as const
+const PIE_COLORS = ['#c41428', '#e8195c', '#ff5fa0', '#a0004a', '#ff8030', '#7a0020']
 
 function Sec({ title, children, style }: { title: string; children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(196,20,40,0.15)', borderRadius: 12, padding: '18px 20px', marginBottom: 14, ...style }}>
+    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(196,20,40,0.15)', borderRadius: 12, padding: '18px 20px', ...style }}>
       <div style={{ ...S, fontSize: 8, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', marginBottom: 16 }}>{title}</div>
       {children}
     </div>
   )
 }
 
-// 7×24 heatmap grid
-function HeatmapGrid({ data }: { data: { day: number; hour: number; count: number }[] }) {
-  const max = Math.max(...data.map(d => d.count), 1)
-  const grid = new Map(data.map(d => [`${d.day}:${d.hour}`, d.count]))
-  const [tip, setTip] = useState<{ day: number; hour: number; count: number } | null>(null)
+function fmt(s: number) {
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60), sec = s % 60
+  return sec > 0 ? `${m}m ${sec}s` : `${m}m`
+}
 
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
+}
+
+function Bar({ value, max, color = '#c41428' }: { value: number; max: number; color?: string }) {
   return (
-    <div style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', gap: 2 }}>
-        {/* Day labels */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginRight: 4 }}>
-          <div style={{ height: 16 }} /> {/* hour label row */}
-          {DAYS_SHORT.map((d, i) => (
-            <div key={i} style={{ height: 14, display: 'flex', alignItems: 'center', ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)' }}>{d}</div>
-          ))}
-        </div>
-        <div style={{ flex: 1 }}>
-          {/* Hour labels */}
-          <div style={{ display: 'flex', gap: 2, marginBottom: 2 }}>
-            {Array.from({ length: 24 }, (_, h) => (
-              <div key={h} style={{ flex: 1, textAlign: 'center', ...S, fontSize: 7, color: 'rgba(254,240,244,0.25)' }}>
-                {h % 6 === 0 ? `${h}h` : ''}
-              </div>
-            ))}
-          </div>
-          {/* Grid */}
-          {Array.from({ length: 7 }, (_, day) => (
-            <div key={day} style={{ display: 'flex', gap: 2, marginBottom: 2 }}>
-              {Array.from({ length: 24 }, (_, hour) => {
-                const count = grid.get(`${day}:${hour}`) ?? 0
-                const intensity = count / max
-                return (
-                  <div
-                    key={hour}
-                    onMouseEnter={() => setTip({ day, hour, count })}
-                    onMouseLeave={() => setTip(null)}
-                    style={{
-                      flex: 1, height: 14, borderRadius: 2, cursor: 'default',
-                      background: count === 0
-                        ? 'rgba(255,255,255,0.04)'
-                        : `rgba(196,20,40,${0.15 + intensity * 0.85})`,
-                      transition: 'background 0.2s',
-                    }}
-                  />
-                )
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
-      {tip && tip.count > 0 && (
-        <div style={{
-          position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(5,0,7,0.97)', border: '1px solid rgba(196,20,40,0.35)',
-          borderRadius: 6, padding: '5px 10px', pointerEvents: 'none', whiteSpace: 'nowrap',
-          ...S, fontSize: 9, color: '#fee0f4', marginBottom: 6,
-        }}>
-          {DAYS[tip.day]} {tip.hour}:00 — {tip.count} visits
-        </div>
-      )}
+    <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+      <div style={{ height: '100%', width: `${(value / Math.max(max, 1)) * 100}%`, background: color, borderRadius: 2, transition: 'width 0.6s ease' }} />
     </div>
   )
 }
 
-// Simple funnel
-function Funnel({ pages }: { pages: { page: string; count: number }[] }) {
-  const top = pages.slice(0, 6)
-  const max = top[0]?.count ?? 1
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {top.map((p, i) => {
-        const pct = Math.round((p.count / max) * 100)
-        const w = 40 + pct * 0.6
-        return (
-          <div key={p.page} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.35)', flex: '0 0 18px', textAlign: 'right' }}>{i + 1}</span>
-            <div style={{ flex: `0 0 ${w}%`, height: 28, background: `rgba(196,20,40,${0.5 - i * 0.07})`, borderRadius: '0 4px 4px 0', display: 'flex', alignItems: 'center', paddingLeft: 10, transition: 'flex 0.4s ease' }}>
-              <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.9)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.page}</span>
-            </div>
-            <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)' }}>{p.count}</span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-export default function TrafficPage() {
+export default function OverviewPage() {
   const router = useRouter()
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/admin/stats')
-      .then(r => { if (r.status === 401) { router.replace('/admin/login'); return null } return r.json() as Promise<Stats> })
+      .then(r => { if (r.status === 401) { router.push('/admin/login'); return null } return r.json() })
       .then(d => { if (d) { setStats(d); setLoading(false) } })
-      .catch(() => router.replace('/admin/login'))
+      .catch(() => setLoading(false))
   }, [router])
 
-  if (loading) return <div style={{ ...S, fontSize: 14, color: 'rgba(254,240,244,0.3)', paddingTop: 60, textAlign: 'center' }}>loading…</div>
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', ...S, fontSize: 10, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em' }}>
+      cargando…
+    </div>
+  )
   if (!stats) return null
 
-  // Build stacked area data per page
-  const topPages = stats.byPage.slice(0, 4).map(p => p.page)
-  const areaData = stats.byDay.map(d => {
-    const row: Record<string, string | number> = { date: d.date.slice(5) }
-    for (const p of topPages) row[p] = 0
-    return row
-  })
-  // We don't have byDayByPage breakdown, approximate with proportional split
-  for (const day of areaData) {
-    const total = stats.byDay.find(d => d.date.slice(5) === day.date)?.count ?? 0
-    for (const p of topPages) {
-      const share = (stats.byPage.find(bp => bp.page === p)?.count ?? 0) / Math.max(stats.total, 1)
-      day[p] = Math.round(total * share)
-    }
-  }
+  const topPageMax = stats.byPage[0]?.count ?? 1
+  const topCountryMax = stats.byCountry[0]?.count ?? 1
+  const topRefMax = stats.byReferrer[0]?.count ?? 1
 
-  const PAGE_COLORS = ['#c41428', '#e8195c', '#ff5fa0', '#ff8030']
+  // Device donut
+  const deviceTotal = stats.byDevice.reduce((a, b) => a + b.count, 0)
+  const deviceLabels: Record<string, string> = { desktop: '🖥 desktop', mobile: '📱 mobile', tablet: '⬜ tablet' }
 
-  const refData = stats.byReferrer.slice(0, 6).map((r, i) => ({
-    name: r.referrer === '(directo)' || !r.referrer ? 'directo' : r.referrer,
-    value: r.count,
-    color: PIE_COLORS[i] ?? PIE_COLORS[PIE_COLORS.length - 1],
-  }))
+  // Recent: last 5 unique sessions
+  const recentSessions = stats.sessions.slice(0, 5)
 
   return (
-    <>
-      <div style={{ marginBottom: 22 }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: 'var(--text)', margin: 0 }}>traffic</h1>
-        <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 4 }}>
-          análisis de fuentes y comportamiento
+    <div style={{ maxWidth: 960, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: 'var(--text)', lineHeight: 1.1 }}>
+          overview
+        </div>
+        <div style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em', marginTop: 4, textTransform: 'uppercase' }}>
+          all-time summary
         </div>
       </div>
 
-      {/* Heatmap + Area chart */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }} className="tr-grid">
-        <Sec title="actividad por hora y día">
-          <HeatmapGrid data={stats.byDayHour} />
-        </Sec>
-        <Sec title="traffic by page — 7 days">
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={areaData} margin={{ top: 4, right: 8, bottom: 0, left: -24 }}>
-              <XAxis dataKey="date" tick={{ fill: 'rgba(254,240,244,0.3)', fontSize: 9, fontFamily: 'Space Mono, monospace' }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fill: 'rgba(254,240,244,0.3)', fontSize: 9 }} tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={TT} />
-              {topPages.map((p, i) => (
-                <Area key={p} type="monotone" dataKey={p} stackId="a" fill={PAGE_COLORS[i]} stroke={PAGE_COLORS[i]} fillOpacity={0.5} strokeWidth={1.5} />
-              ))}
+      {/* KPI row */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+        <KPICard
+          label="total visits"
+          value={stats.total.toLocaleString()}
+          delta={stats.deltaTotal}
+          sub="vs yesterday"
+          accent
+        />
+        <KPICard
+          label="unique visitors"
+          value={stats.unique.toLocaleString()}
+          delta={stats.deltaUnique}
+          sub="by IP"
+          sparkData={stats.byDay.map(d => d.count)}
+        />
+        <KPICard
+          label="active · last hour"
+          value={stats.activeLastHour}
+          sub="visitors"
+        />
+        <KPICard
+          label="bounce rate"
+          value={`${stats.bounceRate}%`}
+          sub={stats.bounceRate < 50 ? 'good' : stats.bounceRate < 70 ? 'ok' : 'high'}
+        />
+        <KPICard
+          label="avg session"
+          value={fmt(stats.avgDuration)}
+          sub="duration"
+        />
+      </div>
+
+      {/* Visits over time + device donut */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 10, marginBottom: 14 }}>
+        <Sec title="visits · last 7 days">
+          <ResponsiveContainer width="100%" height={120}>
+            <AreaChart data={stats.byDay} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+              <defs>
+                <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#c41428" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#c41428" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="date" tickFormatter={fmtDate} tick={AXIS_TICK} axisLine={false} tickLine={false} />
+              <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={TT} labelFormatter={(label: unknown) => typeof label === 'string' ? fmtDate(label) : String(label ?? '')} formatter={(value: unknown) => [String(value ?? ''), 'visits'] as const} />
+              <Area type="monotone" dataKey="count" stroke="#c41428" strokeWidth={1.5} fill="url(#grad)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
-            {topPages.map((p, i) => (
-              <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <div style={{ width: 8, height: 8, borderRadius: 2, background: PAGE_COLORS[i] }} />
-                <span style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.45)' }}>{p}</span>
+        </Sec>
+
+        <Sec title="devices">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <PieChart width={120} height={100}>
+              <Pie data={stats.byDevice} dataKey="count" nameKey="device" cx={60} cy={50} innerRadius={30} outerRadius={48} paddingAngle={3}>
+                {stats.byDevice.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+              </Pie>
+            </PieChart>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {stats.byDevice.map((d, i) => (
+                <div key={d.device} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: PIE_COLORS[i % PIE_COLORS.length], flexShrink: 0 }} />
+                    <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.55)' }}>{deviceLabels[d.device] ?? d.device}</span>
+                  </div>
+                  <span style={{ ...S, fontSize: 9, color: 'var(--text)' }}>{deviceTotal > 0 ? Math.round((d.count / deviceTotal) * 100) : 0}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Sec>
+      </div>
+
+      {/* Pages + Countries + Referrers */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
+        <Sec title="top pages">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {stats.byPage.slice(0, 6).map(p => (
+              <div key={p.page} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75%' }}>{p.page}</span>
+                  <span style={{ ...S, fontSize: 9, color: 'var(--text)', flexShrink: 0 }}>{p.count}</span>
+                </div>
+                <Bar value={p.count} max={topPageMax} />
+              </div>
+            ))}
+          </div>
+        </Sec>
+
+        <Sec title="top countries">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {stats.byCountry.slice(0, 6).map(c => (
+              <div key={c.code} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75%' }}>
+                    {c.code && (
+                      <img
+                        src={`https://flagcdn.com/16x12/${c.code.toLowerCase()}.png`}
+                        alt={c.code}
+                        style={{ width: 14, height: 10, objectFit: 'cover', marginRight: 5, borderRadius: 1, verticalAlign: 'middle', display: 'inline-block' }}
+                      />
+                    )}
+                    {c.country}
+                  </span>
+                  <span style={{ ...S, fontSize: 9, color: 'var(--text)', flexShrink: 0 }}>{c.count}</span>
+                </div>
+                <Bar value={c.count} max={topCountryMax} color="#e8195c" />
+              </div>
+            ))}
+          </div>
+        </Sec>
+
+        <Sec title="referrers">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {stats.byReferrer.length === 0 && (
+              <div style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.25)' }}>no referrers yet</div>
+            )}
+            {stats.byReferrer.slice(0, 6).map(r => (
+              <div key={r.referrer} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75%' }}>{r.referrer}</span>
+                  <span style={{ ...S, fontSize: 9, color: 'var(--text)', flexShrink: 0 }}>{r.count}</span>
+                </div>
+                <Bar value={r.count} max={topRefMax} color="#ff5fa0" />
               </div>
             ))}
           </div>
         </Sec>
       </div>
 
-      {/* Funnel */}
-      <Sec title="pages más visitadas — funnel">
-        <Funnel pages={stats.byPage} />
-      </Sec>
-
-      {/* Referrers */}
-      <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 14 }} className="ref-grid">
-        <Sec title="fuentes de traffic" style={{ marginBottom: 0 }}>
-          <ResponsiveContainer width="100%" height={160}>
-            <PieChart>
-              <Pie data={refData} dataKey="value" innerRadius={45} outerRadius={70} paddingAngle={2}>
-                {refData.map((r, i) => <Cell key={i} fill={r.color} />)}
-              </Pie>
-              <Tooltip contentStyle={TT} formatter={(v) => [v, 'visits']} />
-            </PieChart>
-          </ResponsiveContainer>
+      {/* Recent sessions + Browser/OS */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 10 }}>
+        <Sec title="recent sessions">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {recentSessions.length === 0 && (
+              <div style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.25)' }}>no sessions yet</div>
+            )}
+            {recentSessions.map(sess => (
+              <div key={sess.sessionId} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 10px',
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(196,20,40,0.1)',
+                borderRadius: 8, gap: 8,
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                  <div style={{ ...S, fontSize: 9, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {sess.city ? `${sess.city}, ` : ''}{sess.country ?? '—'}
+                  </div>
+                  <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {sess.pages.join(' → ')}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                  <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)' }}>{fmt(sess.duration)}</div>
+                  <div style={{ ...S, fontSize: 8, color: 'rgba(196,20,40,0.55)' }}>
+                    {sess.browser ?? ''}{sess.os ? ` · ${sess.os}` : ''}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </Sec>
-        <Sec title="referrers — detalle" style={{ marginBottom: 0 }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  {['fuente', 'visits', '%'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', ...S, fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.55)', paddingBottom: 10, paddingRight: 16, borderBottom: '1px solid rgba(196,20,40,0.1)' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {stats.byReferrer.map(r => {
-                  const name = r.referrer || 'directo'
-                  return (
-                    <tr key={r.referrer}>
-                      <td style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.6)', padding: '7px 16px 7px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</td>
-                      <td style={{ ...S, fontSize: 10, color: 'var(--text)', padding: '7px 16px 7px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>{r.count}</td>
-                      <td style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.35)', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>{Math.round(r.count / stats.total * 100)}%</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+
+        <Sec title="browsers">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {stats.byBrowser.slice(0, 6).map((b, i) => (
+              <div key={b.browser} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.6)' }}>{b.browser}</span>
+                  <span style={{ ...S, fontSize: 9, color: 'var(--text)' }}>{b.count}</span>
+                </div>
+                <Bar value={b.count} max={stats.byBrowser[0]?.count ?? 1} color={PIE_COLORS[i % PIE_COLORS.length]} />
+              </div>
+            ))}
           </div>
         </Sec>
       </div>
-
-      <style>{`
-        @media (max-width: 900px) { .tr-grid, .ref-grid { grid-template-columns: 1fr !important; } }
-      `}</style>
-    </>
+    </div>
   )
 }

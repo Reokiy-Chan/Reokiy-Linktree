@@ -28,6 +28,16 @@ const Icons = {
       <path d="M12 21.593c-.39 0-.772-.155-1.057-.44l-8.38-8.38a5.97 5.97 0 0 1 0-8.436 5.97 5.97 0 0 1 8.437 0l1 1 1-1a5.97 5.97 0 0 1 8.437 0 5.97 5.97 0 0 1 0 8.437l-8.38 8.38c-.285.284-.668.44-1.057.44z"/>
     </svg>
   ),
+  Kofi: () => (
+    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+      <path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.426 2.683-2.566 2.658-3.734 4.352.24 7.422-2.831 6.649-6.916zm-11.062 3.511c-1.246 1.453-4.011 3.976-4.011 3.976s-.121.119-.31.023c-.076-.057-.108-.09-.108-.09-.443-.441-3.368-3.049-4.034-3.954-.709-.965-1.041-2.7-.091-3.71.951-1.01 3.005-1.086 4.363.407 0 0 1.565-1.782 3.468-.963 1.904.82 1.832 3.011.723 4.311zm6.173.478c-.928.116-1.682.028-1.682.028V7.284h1.77s1.971.551 1.971 2.638c0 1.913-.985 2.667-2.059 3.015z"/>
+    </svg>
+  ),
+  Throne: () => (
+    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+      <path d="M12 1 3 5v6c0 5.25 3.75 10.15 9 11.35C17.25 21.15 21 16.25 21 11V5l-9-4zm0 4 5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/>
+    </svg>
+  ),
 }
 
 const LINKS = [
@@ -35,6 +45,8 @@ const LINKS = [
   { label: 'twitter / x', sublabel: '@reoki14', href: 'https://x.com/Reoki14', icon: 'Twitter' as const, accent: '#e8195c' },
   { label: 'bluesky', sublabel: '@reokiy.bsky.social', href: 'https://bsky.app/profile/reokiy.bsky.social', icon: 'Bluesky' as const, accent: '#0085ff' },
   { label: 'fansly', sublabel: '18+ content ♥', href: 'https://fansly.com/Reokiy/posts', icon: 'Fansly' as const, accent: '#e8195c' },
+  { label: 'ko-fi', sublabel: 'support me ♡', href: 'https://ko-fi.com/reokiy14', icon: 'Kofi' as const, accent: '#FF5E5B' },
+  { label: 'throne', sublabel: 'my wishlist', href: 'https://throne.com/reokiy14', icon: 'Throne' as const, accent: '#9b59b6' },
 ]
 
 

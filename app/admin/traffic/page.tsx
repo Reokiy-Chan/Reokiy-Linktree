@@ -11,7 +11,7 @@ import type { Stats } from '@/app/lib/data'
 const TT = { background: 'rgba(5,0,7,0.97)', border: '1px solid rgba(196,20,40,0.35)', borderRadius: 8, fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#fee0f4', padding: '6px 10px' }
 const S: React.CSSProperties = { fontFamily: 'var(--font-body)' }
 const PIE_COLORS = ['#c41428', '#e8195c', '#ff5fa0', '#ff8030', '#a0004a', '#7a0020']
-const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] // duplicados T y S → usar índice como key
 
 function Sec({ title, children, style }: { title: string; children: React.ReactNode; style?: React.CSSProperties }) {
   return (
@@ -34,8 +34,8 @@ function HeatmapGrid({ data }: { data: { day: number; hour: number; count: numbe
         {/* Day labels */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginRight: 4 }}>
           <div style={{ height: 16 }} /> {/* hour label row */}
-          {DAYS.map(d => (
-            <div key={d} style={{ height: 14, display: 'flex', alignItems: 'center', ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)' }}>{d}</div>
+          {DAYS.map((d, i) => (
+            <div key={i} style={{ height: 14, display: 'flex', alignItems: 'center', ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)' }}>{d}</div>
           ))}
         </div>
         <div style={{ flex: 1 }}>

@@ -185,6 +185,44 @@
       "isNew": false,
       "id": "90d1d7a5-7141-4369-b16b-f3d9b8ead8ab",
       "duration": 116
+    },
+    {
+      "page": "/",
+      "timestamp": "2026-04-26T20:10:56.018Z",
+      "ip": "::ffff:127.0.0.1",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0",
+      "browser": "Firefox",
+      "os": "Windows",
+      "device": "desktop",
+      "sessionId": "8bc5977e-fe1d-4c53-a8ea-3b5b5fb7db82",
+      "isNew": true,
+      "id": "c875309c-cda0-4bc4-967c-0bf1a418950b"
+    },
+    {
+      "page": "/",
+      "timestamp": "2026-04-26T20:12:30.908Z",
+      "ip": "::ffff:127.0.0.1",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0",
+      "browser": "Firefox",
+      "os": "Windows",
+      "device": "desktop",
+      "sessionId": "f46b1d1a-68c0-412b-a435-7b069a230f40",
+      "isNew": false,
+      "id": "7aa6ddb1-3952-4ed7-9753-d6e05dadd374",
+      "duration": 41
+    },
+    {
+      "page": "/",
+      "timestamp": "2026-04-26T20:24:49.252Z",
+      "ip": "::ffff:127.0.0.1",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0",
+      "browser": "Firefox",
+      "os": "Windows",
+      "device": "desktop",
+      "sessionId": "f46b1d1a-68c0-412b-a435-7b069a230f40",
+      "isNew": false,
+      "id": "08c5e84f-f559-4141-acc5-a89045ea965c",
+      "duration": 31
     }
   ]
 }

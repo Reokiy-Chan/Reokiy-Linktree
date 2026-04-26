@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { PALETTES, ColorPalette } from '../lib/themes'
 
 interface ThemeContextValue {
@@ -20,27 +20,26 @@ export const useTheme = () => useContext(ThemeContext)
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [bgIndex, setBgIndex] = useState(0)
   const [mounted, setMounted] = useState(false)
+  const [bgReady, setBgReady] = useState(false)
+  const bgRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const idx = Math.floor(Math.random() * PALETTES.length)
     setBgIndex(idx)
     setMounted(true)
+
+    // Precargar la imagen elegida antes de mostrarla
+    // Evita el flash donde el fondo aparece a medias cargado
+    const img = new Image()
+    img.onload = () => setBgReady(true)
+    img.onerror = () => setBgReady(true) // mostrar igual si falla
+    img.src = PALETTES[idx].bg
   }, [])
 
   const palette = PALETTES[bgIndex]
 
   useEffect(() => {
     if (!mounted) return
-    // Preload bg image to avoid blank-on-reload
-    const existing = document.querySelector('link[data-bg-preload]')
-    if (existing) existing.remove()
-    const link = document.createElement('link')
-    link.rel = 'preload'
-    link.as = 'image'
-    link.href = palette.bg
-    link.setAttribute('data-bg-preload', '1')
-    document.head.appendChild(link)
-
     const r = document.documentElement
     r.style.setProperty('--primary', palette.primary)
     r.style.setProperty('--primary-dim', palette.primaryDim)
@@ -56,22 +55,33 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ palette, bgIndex, mounted }}>
-      {mounted && (
-        <div
-          aria-hidden
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundImage: `url(${palette.bg})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            filter: 'brightness(0.18) saturate(1.5) blur(3px)',
-            zIndex: 0,
-            transform: 'scale(1.06)',
-            transition: 'background-image 0.8s ease',
-          }}
-        />
-      )}
+      {/*
+        El div de fondo SIEMPRE está en el DOM (sin gate de mounted).
+        Antes: {mounted && <div>} → el div no existe en el HTML inicial,
+        aparece 200-400ms tarde cuando el JS hidrata y el effect corre.
+
+        Ahora: el div existe desde el SSR con opacity:0,
+        y hace fade-in solo cuando la imagen terminó de cargar.
+        suppressHydrationWarning porque bgIndex cambia entre SSR (0) y cliente (random).
+      */}
+      <div
+        ref={bgRef}
+        aria-hidden
+        suppressHydrationWarning
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundImage: `url(${palette.bg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'brightness(0.18) saturate(1.5) blur(3px)',
+          zIndex: 0,
+          transform: 'scale(1.06)',
+          opacity: bgReady ? 1 : 0,
+          transition: 'opacity 0.6s ease',
+          willChange: 'opacity',
+        }}
+      />
       {children}
     </ThemeContext.Provider>
   )

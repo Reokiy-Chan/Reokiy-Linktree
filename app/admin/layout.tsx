@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/app/lib/auth'
 import AdminSidebar from './components/AdminSidebar'
@@ -13,6 +13,19 @@ export const metadata: Metadata = {
 }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  // Leer el pathname inyectado por middleware.ts
+  // Sin esto, el layout no puede saber si está renderizando /admin/login
+  // y redirige de vuelta ahí en bucle infinito
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') ?? ''
+
+  // Si estamos en la página de login, renderizar sin verificar auth
+  // (el login no debe estar protegido por sí mismo)
+  if (pathname === '/admin/login') {
+    return <>{children}</>
+  }
+
+  // Para todas las demás rutas /admin/*, verificar autenticación
   const cookieStore = await cookies()
   const token = cookieStore.get('admin_session')?.value
   const secret = process.env.ADMIN_SECRET ?? 'reokiy_secret_change_me'

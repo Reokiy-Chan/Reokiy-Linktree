@@ -124,16 +124,50 @@ export default function MusicPlayer() {
       audio.play().catch(() => {})
       fireToast()
     } else if (!autoplayRef.current) {
-      // Attempt autoplay on first load
+      // Intentar autoplay en la primera carga
       autoplayRef.current = true
       audio.play().then(() => {
         setAutoBlocked(false)
         fireToast()
       }).catch(() => {
+        // El browser bloqueó el autoplay (política de interacción del usuario)
+        // El efecto de abajo se encarga de desbloquearlo en el primer click
         setAutoBlocked(true)
       })
     }
   }, [currentIndex, songs, fireToast])
+
+  // ── Desbloqueo automático en primer gesto del usuario ──────────────────
+  // Los browsers modernos bloquean el autoplay hasta que el usuario interactúe
+  // con la página. Este efecto escucha cualquier click/tecla/touch y arranca
+  // la música sin que el usuario tenga que encontrar el botón del player.
+  useEffect(() => {
+    if (!autoBlocked) return
+
+    const unlock = () => {
+      const audio = audioRef.current
+      if (!audio) return
+      audio.play().then(() => {
+        setAutoBlocked(false)
+        fireToast()
+      }).catch(() => {
+        // Si sigue bloqueado (raro), dejar el hint visible
+      })
+      document.removeEventListener('click', unlock)
+      document.removeEventListener('keydown', unlock)
+      document.removeEventListener('touchstart', unlock)
+    }
+
+    document.addEventListener('click', unlock)
+    document.addEventListener('keydown', unlock)
+    document.addEventListener('touchstart', unlock, { passive: true })
+
+    return () => {
+      document.removeEventListener('click', unlock)
+      document.removeEventListener('keydown', unlock)
+      document.removeEventListener('touchstart', unlock)
+    }
+  }, [autoBlocked, fireToast])
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume
@@ -187,7 +221,7 @@ export default function MusicPlayer() {
         leaving={toastLeaving}
       />
 
-      {/* Autoplay blocked hint */}
+      {/* Hint de autoplay bloqueado — click en cualquier parte desbloquea también */}
       {autoBlocked && (
         <div
           onClick={togglePlay}
