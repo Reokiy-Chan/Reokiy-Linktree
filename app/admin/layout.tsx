@@ -21,7 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   // Si estamos en la página de login, renderizar sin verificar auth
   // (el login no debe estar protegido por sí mismo)
-  if (pathname === '/admin/login') {
+  if (pathname.startsWith('/admin/login')) {
     return <>{children}</>
   }
 

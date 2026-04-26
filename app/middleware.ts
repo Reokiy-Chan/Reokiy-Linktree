@@ -16,5 +16,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   // Aplica a todo excepto assets estáticos y rutas internas de Next.js
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|ico|webp|mp3|mp4)).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:png|jpg|jpeg|svg|ico|webp|mp3|mp4)).*)',
+  ],
 }
