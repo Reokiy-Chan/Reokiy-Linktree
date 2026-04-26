@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import ParticlesBg from '../components/ParticlesBg'
+import Carousel from '../components/Carousel'
 
 /* ── Sticker component ── */
 const STICKER_ANIM = [
@@ -383,6 +384,14 @@ export default function AboutMe() {
                 }}
               />
             ))}
+          </div>
+        </div>
+
+        {/* ── Gallery ── */}
+        <div className="card" style={{ marginBottom: 16, padding: '20px 20px 12px' }}>
+          <SectionHeader>galería</SectionHeader>
+          <div style={{ margin: '0 -20px -12px' }}>
+            <Carousel autoPlay interval={4000} />
           </div>
         </div>
 
