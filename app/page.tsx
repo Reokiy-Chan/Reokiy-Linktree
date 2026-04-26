@@ -84,6 +84,7 @@ export default function Home() {
                 <img
                   src={avatarUrl || '/images/logo.png'}
                   alt="Reokiy"
+                  onError={(e) => { e.currentTarget.src = '/images/logo.png' }}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', transition: 'opacity 0.4s ease' }}
                 />
               </div>

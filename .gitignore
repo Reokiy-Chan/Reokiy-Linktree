@@ -1,2 +1,6 @@
 .next/
 node_modules/
+*.zip
+.env
+package-lock.json
+turbocc.zip

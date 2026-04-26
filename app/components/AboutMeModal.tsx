@@ -260,7 +260,7 @@ export default function AboutMeModal({ open, onClose }: { open: boolean; onClose
                     Reokiy
                   </div>
                   <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: 4 }}>
-                    also known as Lucy • 21
+                    also known as Lucy • 21+
                   </div>
                 </div>
               </div>

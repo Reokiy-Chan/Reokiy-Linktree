@@ -44,7 +44,7 @@ function NowPlayingToast({ song, artist, visible, leaving }: {
         }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: 'var(--font-body)', fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 3 }}>
-            ahora suena
+            now playing
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 13, color: 'rgba(255,255,255,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {song}
@@ -69,10 +69,12 @@ export default function MusicPlayer() {
   const [showToast, setShowToast] = useState(false)
   const [toastLeaving, setToastLeaving] = useState(false)
   const [ready, setReady] = useState(false)
+  const [autoBlocked, setAutoBlocked] = useState(false)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const loadedRef = useRef(-1)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const autoplayRef = useRef(false)
 
   useEffect(() => {
     fetch('/api/songs')
@@ -118,8 +120,19 @@ export default function MusicPlayer() {
     const wasPlaying = !audio.paused
     audio.src = `/audio/songs/${encodeURIComponent(songs[currentIndex])}`
     audio.load()
-    if (wasPlaying) audio.play().catch(() => {})
-    fireToast()
+    if (wasPlaying) {
+      audio.play().catch(() => {})
+      fireToast()
+    } else if (!autoplayRef.current) {
+      // Attempt autoplay on first load
+      autoplayRef.current = true
+      audio.play().then(() => {
+        setAutoBlocked(false)
+        fireToast()
+      }).catch(() => {
+        setAutoBlocked(true)
+      })
+    }
   }, [currentIndex, songs, fireToast])
 
   useEffect(() => {
@@ -129,7 +142,7 @@ export default function MusicPlayer() {
   const togglePlay = useCallback(() => {
     const a = audioRef.current
     if (!a) return
-    if (a.paused) { a.play().catch(() => {}); fireToast() }
+    if (a.paused) { a.play().catch(() => {}); fireToast(); setAutoBlocked(false) }
     else a.pause()
   }, [fireToast])
 
@@ -173,6 +186,24 @@ export default function MusicPlayer() {
         visible={showToast}
         leaving={toastLeaving}
       />
+
+      {/* Autoplay blocked hint */}
+      {autoBlocked && (
+        <div
+          onClick={togglePlay}
+          style={{
+            position: 'fixed', bottom: 64, right: 20, zIndex: 999,
+            fontFamily: 'var(--font-body)', fontSize: 9, letterSpacing: '0.1em',
+            color: 'rgba(255,255,255,0.55)', cursor: 'pointer',
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 8, padding: '5px 10px',
+            animation: 'tp-in 0.4s ease forwards',
+          }}
+        >
+          🎵 click to play
+        </div>
+      )}
 
       {/* Corner controls — bottom right */}
       <div style={{

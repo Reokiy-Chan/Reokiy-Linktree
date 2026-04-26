@@ -1,7 +1,0 @@
-- quiero que se reproduzca de fondo en toda la web una serie de canciones .mp3 alojadas en /public/audio/songs, estas mismas tendrán un pequeño control abajo para poder subir el volumen, bajarlo, etc o pausarla, la calcion escogida será aleatoria y cambiará cada vez que refresques la página, estas pueden estar en varios formatos, ya sea mp4, o ma4, etc
-- quiero que en la página de about me agregues una sección que sea un carrousel interactivo mostrando unas cuantas imagenes que están en /public/images/carrousel
-- quiero que arregles la detección de discord en la raíz, ya que poniendo el user id no coge el estado
-- investiga porque a veces al recargar no carga la imagen
-- optimiza los tiempos de carga
-- crea un panel de control desde el que se pueda ver info chula de la web, que tenga login, y que permita visualizar stats como visitantes, desde donde es visitada la web, etc
-- quiero que lo dejes todo preparado para que la página se pudea descubrir desde google

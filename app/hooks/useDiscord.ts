@@ -24,7 +24,7 @@ export interface LanyardData {
   }
 }
 
-const DISCORD_USER_ID = process.env.NEXT_PUBLIC_DISCORD_USER_ID ?? '1023628644213587998'
+const DISCORD_USER_ID = process.env.NEXT_PUBLIC_DISCORD_USER_ID ?? '1152931582567526431'
 const CACHE_KEY = 'discord_avatar_cache'
 
 export function useDiscord() {
