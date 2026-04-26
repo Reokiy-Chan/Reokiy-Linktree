@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { ThemeProvider } from './components/ThemeProvider'
 import TypewriterTitle from './components/TypewriterTitle'
+import MusicPlayer from './components/MusicPlayer'
 
 export const metadata: Metadata = {
   title: {
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <TypewriterTitle />
           {children}
+          <MusicPlayer />
         </ThemeProvider>
       </body>
     </html>
