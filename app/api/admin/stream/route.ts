@@ -20,9 +20,9 @@ export async function GET(req: NextRequest) {
       const send = (data: unknown) => {
         try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`)) } catch {}
       }
-      const tick = () => {
+      const tick = async () => {
         try {
-          const { visits } = readVisits()
+          const { visits } = await readVisits()
           const now = Date.now()
           const oneHourAgo = now - 60 * 60 * 1000
           const oneDayAgo = now - 24 * 60 * 60 * 1000

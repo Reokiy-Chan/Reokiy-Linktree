@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
 
     // Duration update request
     if (type === 'duration' && sessionId && duration != null) {
-      updateVisitDuration(sessionId, page, duration)
+      await updateVisitDuration(sessionId, page, duration)
       return NextResponse.json({ ok: true })
     }
 
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     const newSessionId = sessionId ?? existingSession ?? crypto.randomUUID()
 
-    addVisit({
+    await addVisit({
       page, timestamp: new Date().toISOString(),
       country, countryCode, city, lat, lon,
       referrer: referrer || undefined, ip: ip || undefined,
