@@ -91,7 +91,7 @@ export function parseUA(ua: string): { browser: string; os: string; device: stri
 
 // ─── Storage backend ──────────────────────────────────────────────────────────
 
-const USE_KV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+const USE_KV = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
 const KV_KEY = 'reokiy:visits'
 const KV_DUR = 'reokiy:durations'
 const MAX_VISITS = 10000
@@ -117,7 +117,7 @@ function fsWrite(visits: Visit[]): void {
 
 export async function readVisits(): Promise<VisitsData> {
   if (USE_KV) {
-    const { kv } = await import('@vercel/kv')
+    const { Redis } = await import('@upstash/redis'); const kv = Redis.fromEnv()
     const [items, durations] = await Promise.all([
       kv.lrange<Visit>(KV_KEY, 0, MAX_VISITS - 1),
       kv.hgetall<Record<string, number>>(KV_DUR),
@@ -139,7 +139,7 @@ export async function readVisits(): Promise<VisitsData> {
 export async function addVisit(visit: Omit<Visit, 'id'>): Promise<void> {
   const v: Visit = { ...visit, id: crypto.randomUUID() }
   if (USE_KV) {
-    const { kv } = await import('@vercel/kv')
+    const { Redis } = await import('@upstash/redis'); const kv = Redis.fromEnv()
     await kv.lpush(KV_KEY, v)
     await kv.ltrim(KV_KEY, 0, MAX_VISITS - 1)
     return
@@ -152,7 +152,7 @@ export async function addVisit(visit: Omit<Visit, 'id'>): Promise<void> {
 
 export async function updateVisitDuration(sessionId: string, _page: string, duration: number): Promise<void> {
   if (USE_KV) {
-    const { kv } = await import('@vercel/kv')
+    const { Redis } = await import('@upstash/redis'); const kv = Redis.fromEnv()
     await kv.hset(KV_DUR, { [sessionId]: duration })
     return
   }
