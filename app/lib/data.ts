@@ -1,7 +1,9 @@
 import path from 'path'
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 
-const DATA_DIR = path.join(process.cwd(), 'data')
+// Vercel's project filesystem is read-only at runtime; /tmp IS writable.
+// In dev we keep using the project's data/ dir so data persists across restarts.
+const DATA_DIR = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'data')
 const VISITS_FILE = path.join(DATA_DIR, 'visits.json')
 
 export interface Visit {

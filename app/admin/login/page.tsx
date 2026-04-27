@@ -20,8 +20,9 @@ export default function AdminLogin() {
         body: JSON.stringify({ password }),
       })
       if (res.ok) {
-        router.push('/admin')
-        router.refresh()
+        // Hard navigation ensures the fresh cookie is sent on the next request.
+        // router.push + router.refresh() has a race condition in App Router.
+        window.location.replace('/admin')
       } else {
         setError('Contraseña incorrecta')
       }
