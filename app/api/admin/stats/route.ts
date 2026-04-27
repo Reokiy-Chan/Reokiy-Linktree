@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   if (!token || !verifyToken(token, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const { visits } = readVisits()
+  const { visits } = await readVisits()
   const stats = computeStats(visits)
   return NextResponse.json(stats)
 }

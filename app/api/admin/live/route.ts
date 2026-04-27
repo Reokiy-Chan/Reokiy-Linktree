@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   if (!token || !verifyToken(token, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const { visits } = readVisits()
+  const { visits } = await readVisits()
   const withCoords = [...visits].reverse()
     .filter(v => v.lat != null && v.lon != null)
     .slice(0, 60)
