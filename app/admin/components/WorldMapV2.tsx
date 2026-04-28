@@ -70,6 +70,10 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
 
   // Visits buffered before geo is ready
   const pendingRef = useRef<LiveVisit[]>([])
+  // Tracks which visits have already been spawned — must persist across renders
+  // so that when liveVisits prop updates (parent re-render / new poll), old visits
+  // are not re-spawned and don't accumulate extra bloom points.
+  const seenVisitsRef = useRef(new Set<string>())
 
   // ── Load geo libs ─────────────────────────────────────────
   useEffect(() => {
@@ -318,6 +322,10 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
     }
 
     ctx.restore()
+
+    // ── Heatmap — redrawn every frame so it tracks pan/zoom in sync ───────────
+    if (layersRef.current.heat) drawHeatmap(w, h)
+
     rafRef.current = requestAnimationFrame(draw)
   }, [geoReady, project, getProjection])
 
@@ -352,26 +360,14 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
   useEffect(() => {
     if (!liveVisits?.length) return
     const cv = canvasRef.current
-    const seen = new Set<string>()
     for (const v of liveVisits) {
       const key = `${v.lat},${v.lon},${v.timestamp}`
-      if (seen.has(key)) continue
-      seen.add(key)
+      if (seenVisitsRef.current.has(key)) continue   // skip already-spawned visits
+      seenVisitsRef.current.add(key)
       if (!geoCache) { pendingRef.current.push(v) }
       else if (cv) { spawnArc(v, cv.width / (devicePixelRatio || 1), cv.height / (devicePixelRatio || 1)) }
     }
   }, [liveVisits, spawnArc])
-
-  // ── Heatmap refresh ───────────────────────────────────────
-  useEffect(() => {
-    const id = setInterval(() => {
-      const cv = canvasRef.current
-      if (!cv) return
-      const dpr = devicePixelRatio || 1
-      drawHeatmap(cv.width / dpr, cv.height / dpr)
-    }, 8_000)
-    return () => clearInterval(id)
-  }, [drawHeatmap])
 
   // ── Canvas init + RAF ─────────────────────────────────────
   useEffect(() => {
@@ -388,7 +384,7 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
     window.addEventListener('resize', resize)
     rafRef.current = requestAnimationFrame(draw)
     return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(rafRef.current) }
-  }, [draw, drawHeatmap])
+  }, [draw])
 
   // ── Mouse / wheel handlers ────────────────────────────────
   const handleMouseDown = (e: React.MouseEvent) => {

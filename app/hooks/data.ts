@@ -1,8 +1,7 @@
 import path from 'path'
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync } from 'fs'
 
-const DATA_DIR = path.join(process.cwd(), 'data')
-const VISITS_FILE = path.join(DATA_DIR, 'visits.json')
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Visit {
   id: string
@@ -20,75 +19,25 @@ export interface Visit {
   os?: string
   device?: string
   sessionId?: string
-  duration?: number
   isNew?: boolean
+  duration?: number // seconds, set by updateVisitDuration
 }
 
-export interface VisitsData { visits: Visit[] }
-
-export function readVisits(): VisitsData {
-  try {
-    if (!existsSync(VISITS_FILE)) return { visits: [] }
-    return JSON.parse(readFileSync(VISITS_FILE, 'utf-8'))
-  } catch { return { visits: [] } }
-}
-
-export function writeVisits(data: VisitsData): void {
-  try {
-    if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true })
-    writeFileSync(VISITS_FILE, JSON.stringify(data, null, 2))
-  } catch {}
-}
-
-export function addVisit(visit: Omit<Visit, 'id'>): void {
-  const data = readVisits()
-  data.visits.push({ ...visit, id: crypto.randomUUID() })
-  if (data.visits.length > 10000) data.visits = data.visits.slice(-10000)
-  writeVisits(data)
-}
-
-export function updateVisitDuration(sessionId: string, page: string, duration: number): void {
-  const data = readVisits()
-  for (let i = data.visits.length - 1; i >= 0; i--) {
-    if (data.visits[i].sessionId === sessionId && data.visits[i].page === page) {
-      data.visits[i].duration = duration
-      break
-    }
-  }
-  writeVisits(data)
-}
-
-export function parseUA(ua: string): { browser: string; os: string; device: string } {
-  const mobile = /Mobile|Android|iPhone|iPad|BlackBerry|IEMobile|Opera Mini/i.test(ua)
-  const tablet = /iPad|Android(?!.*Mobile)/i.test(ua)
-  let os = 'Otro'
-  if (/Windows NT/i.test(ua)) os = 'Windows'
-  else if (/Mac OS X/i.test(ua)) os = 'macOS'
-  else if (/Android/i.test(ua)) os = 'Android'
-  else if (/iPhone|iPad/i.test(ua)) os = 'iOS'
-  else if (/Linux/i.test(ua)) os = 'Linux'
-  else if (/CrOS/i.test(ua)) os = 'ChromeOS'
-  let browser = 'Otro'
-  if (/Edg\//i.test(ua)) browser = 'Edge'
-  else if (/OPR\//i.test(ua)) browser = 'Opera'
-  else if (/SamsungBrowser/i.test(ua)) browser = 'Samsung'
-  else if (/Chrome\//i.test(ua)) browser = 'Chrome'
-  else if (/Firefox\//i.test(ua)) browser = 'Firefox'
-  else if (/Safari\//i.test(ua)) browser = 'Safari'
-  const device = tablet ? 'tablet' : mobile ? 'mobile' : 'desktop'
-  return { browser, os, device }
+export interface VisitsData {
+  visits: Visit[]
 }
 
 export interface SessionSummary {
+  id: string
   sessionId: string
   pages: string[]
-  country?: string
-  city?: string
-  browser?: string
-  os?: string
-  device?: string
   duration: number
-  isNew?: boolean
+  device: string
+  browser: string
+  os: string
+  country: string
+  city?: string
+  isNew: boolean
   firstSeen: string
 }
 
@@ -98,53 +47,180 @@ export interface Stats {
   topPage: string
   topCountry: string
   topCountryCode: string
-  byPage: { page: string; count: number }[]
-  byCountry: { country: string; code: string; count: number }[]
-  byDay: { date: string; count: number }[]
-  byReferrer: { referrer: string; count: number }[]
-  recent: Visit[]
-  byHour: { hour: number; count: number }[]
-  byDayHour: { day: number; hour: number; count: number }[]
-  byBrowser: { browser: string; count: number }[]
-  byOS: { os: string; count: number }[]
-  byDevice: { device: string; count: number }[]
+  activeLastHour: number
   bounceRate: number
   avgDuration: number
   deltaTotal: number
   deltaUnique: number
+  byPage: { page: string; count: number }[]
+  byCountry: { country: string; code: string; count: number }[]
+  byDay: { date: string; count: number }[]
+  byDayHour: { day: number; hour: number; count: number }[]
+  byReferrer: { referrer: string; count: number }[]
+  byDevice: { device: string; count: number }[]
+  byBrowser: { browser: string; count: number }[]
+  byOS: { os: string; count: number }[]
   sessions: SessionSummary[]
-  hotPaths: { from: string; to: string; count: number }[]
-  activeLastHour: number
+  recent: Visit[]
 }
 
+// ─── User-agent parser ────────────────────────────────────────────────────────
+
+export function parseUA(ua: string): { browser: string; os: string; device: string } {
+  const u = ua.toLowerCase()
+  let browser = 'Other'
+  if (u.includes('edg/'))                                  browser = 'Edge'
+  else if (u.includes('opr/') || u.includes('opera'))     browser = 'Opera'
+  else if (u.includes('firefox'))                          browser = 'Firefox'
+  else if (u.includes('chrome'))                           browser = 'Chrome'
+  else if (u.includes('safari') && !u.includes('chrome')) browser = 'Safari'
+
+  let os = 'Other'
+  if      (u.includes('windows'))                        os = 'Windows'
+  else if (u.includes('iphone') || u.includes('ipad'))   os = 'iOS'
+  else if (u.includes('android'))                        os = 'Android'
+  else if (u.includes('mac os'))                         os = 'macOS'
+  else if (u.includes('linux'))                          os = 'Linux'
+
+  let device = 'desktop'
+  if      (u.includes('iphone') || (u.includes('android') && u.includes('mobile'))) device = 'mobile'
+  else if (u.includes('ipad')   || (u.includes('android') && !u.includes('mobile'))) device = 'tablet'
+
+  return { browser, os, device }
+}
+
+// ─── Storage backend ──────────────────────────────────────────────────────────
+
+const ON_VERCEL  = !!process.env.VERCEL
+const USE_KV     = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
+const KV_KEY     = 'reokiy:visits'
+const KV_DUR     = 'reokiy:durations'
+const MAX_VISITS = 10000
+
+// ─── Vercel guard ─────────────────────────────────────────────────────────────
+// On Vercel each serverless invocation gets an isolated, ephemeral /tmp that is
+// NOT shared with other instances and is wiped when the instance recycles.
+// Writing visit data there means it silently disappears — this is the cause of
+// data loss and sync failures when multiple users access the panel concurrently.
+// Upstash Redis is the only supported persistence backend on Vercel.
+if (ON_VERCEL && !USE_KV) {
+  throw new Error(
+    '[data] Running on Vercel without Redis. ' +
+    'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in your Vercel project ' +
+    'settings (Storage → Upstash Redis → Connect). ' +
+    'The /tmp filesystem fallback does NOT persist between serverless invocations.'
+  )
+}
+
+// ─── Local filesystem fallback (dev only) ────────────────────────────────────
+const DATA_DIR    = path.join(process.cwd(), 'data')
+const VISITS_FILE = path.join(DATA_DIR, 'visits.json')
+
+function fsRead(): Visit[] {
+  try {
+    if (!existsSync(VISITS_FILE)) return []
+    return (JSON.parse(readFileSync(VISITS_FILE, 'utf-8')) as VisitsData).visits ?? []
+  } catch { return [] }
+}
+
+function fsWrite(visits: Visit[]): void {
+  try {
+    if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true })
+    // Write to a temp file then rename — atomic on the same filesystem,
+    // prevents partial-write corruption if the process is interrupted.
+    const tmp = VISITS_FILE + '.tmp'
+    writeFileSync(tmp, JSON.stringify({ visits }, null, 2))
+    renameSync(tmp, VISITS_FILE)
+  } catch {}
+}
+
+// ─── Public async API ─────────────────────────────────────────────────────────
+
+export async function readVisits(): Promise<VisitsData> {
+  if (USE_KV) {
+    const { Redis } = await import('@upstash/redis'); const kv = Redis.fromEnv()
+    const [items, durations] = await Promise.all([
+      kv.lrange<Visit>(KV_KEY, 0, MAX_VISITS - 1),
+      kv.hgetall<Record<string, number>>(KV_DUR),
+    ])
+    const visits = items.reverse() // LPUSH → newest first; reverse to oldest-first
+    // Merge durations into visits (keyed by sessionId)
+    if (durations) {
+      for (const v of visits) {
+        if (v.sessionId && durations[v.sessionId] != null) {
+          v.duration = durations[v.sessionId]
+        }
+      }
+    }
+    return { visits }
+  }
+  return { visits: fsRead() }
+}
+
+export async function addVisit(visit: Omit<Visit, 'id'>): Promise<void> {
+  const v: Visit = { ...visit, id: crypto.randomUUID() }
+  if (USE_KV) {
+    const { Redis } = await import('@upstash/redis'); const kv = Redis.fromEnv()
+    await kv.lpush(KV_KEY, v)
+    await kv.ltrim(KV_KEY, 0, MAX_VISITS - 1)
+    return
+  }
+  const visits = fsRead()
+  visits.push(v)
+  if (visits.length > MAX_VISITS) visits.splice(0, visits.length - MAX_VISITS)
+  fsWrite(visits)
+}
+
+export async function updateVisitDuration(sessionId: string, _page: string, duration: number): Promise<void> {
+  if (USE_KV) {
+    const { Redis } = await import('@upstash/redis'); const kv = Redis.fromEnv()
+    await kv.hset(KV_DUR, { [sessionId]: duration })
+    return
+  }
+  // Filesystem: update duration on all visits of this session
+  const visits = fsRead()
+  let changed = false
+  for (const v of visits) {
+    if (v.sessionId === sessionId) { v.duration = duration; changed = true }
+  }
+  if (changed) fsWrite(visits)
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+
 export function computeStats(visits: Visit[]): Stats {
-  const pageCount = new Map<string, number>()
+  const pageCount    = new Map<string, number>()
   const countryCount = new Map<string, { country: string; code: string; count: number }>()
-  const ipSet = new Set<string>()
-  const dayCount = new Map<string, number>()
-  const refCount = new Map<string, number>()
-  const hourCount = new Map<number, number>()
+  const ipSet        = new Set<string>()
+  const dayCount     = new Map<string, number>()
   const dayHourCount = new Map<string, number>()
+  const refCount     = new Map<string, number>()
+  const deviceCount  = new Map<string, number>()
   const browserCount = new Map<string, number>()
-  const osCount = new Map<string, number>()
-  const deviceCount = new Map<string, number>()
+  const osCount      = new Map<string, number>()
 
   const now = new Date()
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000)
-  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+  const oneDayAgo    = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+  const twoDaysAgo   = new Date(now.getTime() - 48 * 60 * 60 * 1000)
+  const oneHourAgo   = new Date(now.getTime() - 60 * 60 * 1000)
 
-  let totalToday = 0, totalYesterday = 0, activeLastHour = 0
-  const uniqueToday = new Set<string>()
-  const uniqueYesterday = new Set<string>()
-  const sessionMap = new Map<string, { pages: string[]; visit: Visit }>()
-  const sessionOrder: string[] = []
+  const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0)
+  const yStart     = new Date(todayStart.getTime() - 86400000)
+
+  let todayTotal = 0, yTotal = 0
+  const todayIps = new Set<string>(), yIps = new Set<string>()
+  const activeIps = new Set<string>()
 
   for (const v of visits) {
-    const d = new Date(v.timestamp)
+    const ts = new Date(v.timestamp)
     pageCount.set(v.page, (pageCount.get(v.page) ?? 0) + 1)
-    if (v.ip) ipSet.add(v.ip)
+    if (v.ip) {
+      ipSet.add(v.ip)
+      if (ts >= oneHourAgo) activeIps.add(v.ip)
+      if (ts >= todayStart)  { todayIps.add(v.ip); todayTotal++ }
+      if (ts >= yStart && ts < todayStart) { yIps.add(v.ip); yTotal++ }
+    }
     if (v.country && v.countryCode) {
       const cur = countryCount.get(v.countryCode)
       countryCount.set(v.countryCode, { country: v.country, code: v.countryCode, count: (cur?.count ?? 0) + 1 })
@@ -152,80 +228,78 @@ export function computeStats(visits: Visit[]): Stats {
     if (v.referrer) {
       try { const ref = new URL(v.referrer).hostname; refCount.set(ref, (refCount.get(ref) ?? 0) + 1) } catch {}
     }
-    if (d >= sevenDaysAgo) {
-      const day = d.toISOString().slice(0, 10)
+    if (ts >= sevenDaysAgo) {
+      const day = ts.toISOString().slice(0, 10)
       dayCount.set(day, (dayCount.get(day) ?? 0) + 1)
     }
-    if (d >= oneDayAgo) { totalToday++; if (v.ip) uniqueToday.add(v.ip) }
-    else if (d >= twoDaysAgo) { totalYesterday++; if (v.ip) uniqueYesterday.add(v.ip) }
-    if (d >= oneHourAgo) activeLastHour++
+    // Heatmap: day-of-week (Mon=0) × hour
+    const dow = ts.getDay() === 0 ? 6 : ts.getDay() - 1
+    const dh = `${dow}:${ts.getHours()}`
+    dayHourCount.set(dh, (dayHourCount.get(dh) ?? 0) + 1)
 
-    const hour = d.getHours()
-    hourCount.set(hour, (hourCount.get(hour) ?? 0) + 1)
-    const dow = (d.getDay() + 6) % 7
-    const dhKey = `${dow}:${hour}`
-    dayHourCount.set(dhKey, (dayHourCount.get(dhKey) ?? 0) + 1)
-
+    if (v.device)  deviceCount.set(v.device,  (deviceCount.get(v.device)  ?? 0) + 1)
     if (v.browser) browserCount.set(v.browser, (browserCount.get(v.browser) ?? 0) + 1)
-    if (v.os) osCount.set(v.os, (osCount.get(v.os) ?? 0) + 1)
-    if (v.device) deviceCount.set(v.device, (deviceCount.get(v.device) ?? 0) + 1)
-
-    if (v.sessionId) {
-      if (!sessionMap.has(v.sessionId)) { sessionMap.set(v.sessionId, { pages: [], visit: v }); sessionOrder.push(v.sessionId) }
-      sessionMap.get(v.sessionId)!.pages.push(v.page)
-    }
+    if (v.os)      osCount.set(v.os,          (osCount.get(v.os)          ?? 0) + 1)
   }
 
+  // 7-day series
   const byDay: { date: string; count: number }[] = []
   for (let i = 6; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
+    const d = new Date(now.getTime() - i * 86400000)
     const day = d.toISOString().slice(0, 10)
     byDay.push({ date: day, count: dayCount.get(day) ?? 0 })
   }
 
-  const byHour = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: hourCount.get(h) ?? 0 }))
-  const byDayHour: { day: number; hour: number; count: number }[] = []
-  for (let day = 0; day < 7; day++)
-    for (let hour = 0; hour < 24; hour++)
-      byDayHour.push({ day, hour, count: dayHourCount.get(`${day}:${hour}`) ?? 0 })
+  const byDayHour = [...dayHourCount.entries()].map(([k, count]) => {
+    const [day, hour] = k.split(':').map(Number)
+    return { day, hour, count }
+  })
 
-  const byPage = [...pageCount.entries()].map(([page, count]) => ({ page, count })).sort((a, b) => b.count - a.count).slice(0, 10)
-  const byCountry = [...countryCount.values()].sort((a, b) => b.count - a.count).slice(0, 10)
-  const byReferrer = [...refCount.entries()].map(([referrer, count]) => ({ referrer, count })).sort((a, b) => b.count - a.count).slice(0, 10)
-  const byBrowser = [...browserCount.entries()].map(([browser, count]) => ({ browser, count })).sort((a, b) => b.count - a.count)
-  const byOS = [...osCount.entries()].map(([os, count]) => ({ os, count })).sort((a, b) => b.count - a.count)
-  const byDevice = [...deviceCount.entries()].map(([device, count]) => ({ device, count })).sort((a, b) => b.count - a.count)
+  const byPage      = [...pageCount.entries()].map(([page, count]) => ({ page, count })).sort((a, b) => b.count - a.count).slice(0, 10)
+  const byCountry   = [...countryCount.values()].sort((a, b) => b.count - a.count).slice(0, 10)
+  const byReferrer  = [...refCount.entries()].map(([referrer, count]) => ({ referrer, count })).sort((a, b) => b.count - a.count).slice(0, 10)
+  const byDevice    = [...deviceCount.entries()].map(([device, count]) => ({ device, count })).sort((a, b) => b.count - a.count)
+  const byBrowser   = [...browserCount.entries()].map(([browser, count]) => ({ browser, count })).sort((a, b) => b.count - a.count)
+  const byOS        = [...osCount.entries()].map(([os, count]) => ({ os, count })).sort((a, b) => b.count - a.count)
 
-  let bounceSessions = 0, totalSess = 0, totalDur = 0, durCount = 0
-  const sessions: SessionSummary[] = []
-  for (const sid of [...sessionOrder].reverse().slice(0, 50)) {
+  // Sessions
+  const sessionMap = new Map<string, SessionSummary>()
+  for (const v of visits) {
+    const sid = v.sessionId ?? v.id
+    if (!sessionMap.has(sid)) {
+      sessionMap.set(sid, {
+        id: sid, sessionId: sid, pages: [], duration: v.duration ?? 0,
+        device: v.device ?? 'desktop', browser: v.browser ?? 'Other',
+        os: v.os ?? 'Other', country: v.country ?? '—', city: v.city,
+        isNew: v.isNew ?? true, firstSeen: v.timestamp,
+      })
+    }
     const s = sessionMap.get(sid)!
-    totalSess++
-    if (s.pages.length === 1) bounceSessions++
-    const dur = visits.filter(v => v.sessionId === sid).reduce((a, v) => a + (v.duration ?? 0), 0)
-    if (dur > 0) { totalDur += dur; durCount++ }
-    sessions.push({ sessionId: sid.slice(0, 8), pages: s.pages, country: s.visit.country, city: s.visit.city, browser: s.visit.browser, os: s.visit.os, device: s.visit.device, duration: dur, isNew: s.visit.isNew, firstSeen: s.visit.timestamp })
+    if (!s.pages.includes(v.page)) s.pages.push(v.page)
+    if (v.duration && v.duration > s.duration) s.duration = v.duration
   }
 
-  const pathCount = new Map<string, number>()
-  for (const [, s] of sessionMap)
-    for (let i = 0; i < s.pages.length - 1; i++) {
-      const k = `${s.pages[i]}→${s.pages[i + 1]}`
-      pathCount.set(k, (pathCount.get(k) ?? 0) + 1)
-    }
-  const hotPaths = [...pathCount.entries()]
-    .map(([k, count]) => { const [from, to] = k.split('→'); return { from, to, count } })
-    .sort((a, b) => b.count - a.count).slice(0, 10)
+  const sessions = [...sessionMap.values()].sort((a, b) => b.firstSeen.localeCompare(a.firstSeen))
+  const bounceCount = sessions.filter(s => s.pages.length === 1).length
+  const bounceRate  = sessions.length > 0 ? Math.round(bounceCount / sessions.length * 100) : 0
+  const durSessions = sessions.filter(s => s.duration > 0)
+  const avgDuration = durSessions.length > 0 ? Math.round(durSessions.reduce((acc, s) => acc + s.duration, 0) / durSessions.length) : 0
+
+  const pct = (a: number, b: number) => b === 0 ? (a > 0 ? 100 : 0) : Math.round((a - b) / b * 100)
 
   return {
-    total: visits.length, unique: ipSet.size,
-    topPage: byPage[0]?.page ?? '/', topCountry: byCountry[0]?.country ?? '—', topCountryCode: byCountry[0]?.code ?? '',
-    byPage, byCountry, byDay, byReferrer, recent: [...visits].reverse().slice(0, 30),
-    byHour, byDayHour, byBrowser, byOS, byDevice,
-    bounceRate: totalSess > 0 ? Math.round((bounceSessions / totalSess) * 100) : 0,
-    avgDuration: durCount > 0 ? Math.round(totalDur / durCount) : 0,
-    deltaTotal: totalYesterday > 0 ? Math.round(((totalToday - totalYesterday) / totalYesterday) * 100) : 0,
-    deltaUnique: uniqueYesterday.size > 0 ? Math.round(((uniqueToday.size - uniqueYesterday.size) / uniqueYesterday.size) * 100) : 0,
-    sessions, hotPaths, activeLastHour,
+    total: visits.length,
+    unique: ipSet.size,
+    topPage: byPage[0]?.page ?? '/',
+    topCountry: byCountry[0]?.country ?? '—',
+    topCountryCode: byCountry[0]?.code ?? '',
+    activeLastHour: activeIps.size,
+    bounceRate,
+    avgDuration,
+    deltaTotal: pct(todayTotal, yTotal),
+    deltaUnique: pct(todayIps.size, yIps.size),
+    byPage, byCountry, byDay, byDayHour, byReferrer, byDevice, byBrowser, byOS,
+    sessions: sessions.slice(0, 50),
+    recent: [...visits].reverse().slice(0, 20),
   }
 }
