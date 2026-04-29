@@ -1,0 +1,22 @@
+[
+  {
+    "title": "test",
+    "description": "test",
+    "prizes": [
+      {
+        "id": "9612f840-4cca-4a5f-90b5-6be40dc9cc2c",
+        "label": "testest",
+        "description": "testtest"
+      }
+    ],
+    "endsAt": "2222-02-22T21:02:00.000Z",
+    "autoEnd": false,
+    "maxWinners": 5,
+    "bannedUsernames": [],
+    "winners": [],
+    "id": "cb2ae815-d1c6-4d0c-b90a-974aa51157b7",
+    "entries": [],
+    "status": "active",
+    "createdAt": "2026-04-28T21:26:47.672Z"
+  }
+]

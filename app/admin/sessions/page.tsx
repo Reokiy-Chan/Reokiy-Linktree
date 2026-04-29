@@ -162,7 +162,7 @@ export default function SessionsPage() {
       )}
 
       {/* Sessions table */}
-      <Sec title={`últimas sessions — ${sessions.length} recorded`}>
+      <Sec title={`latest sessions — ${sessions.length} recorded`}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
             <thead>
@@ -196,7 +196,7 @@ export default function SessionsPage() {
                         color: s.isNew ? 'var(--primary)' : 'rgba(254,240,244,0.3)',
                         border: `1px solid ${s.isNew ? 'rgba(196,20,40,0.3)' : 'rgba(255,255,255,0.08)'}`,
                       }}>
-                        {s.isNew ? 'nuevo' : 'recurrente'}
+                        {s.isNew ? 'new' : 'returning'}
                       </span>
                     </td>
                     <td style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.3)', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>{time}</td>

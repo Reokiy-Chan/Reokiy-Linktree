@@ -56,6 +56,7 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
   const heatPtsRef  = useRef<[number, number][]>([])
   const rafRef      = useRef(0)
   const pulseRef    = useRef(0)
+  const visitHistoryRef = useRef<LiveVisit[]>([])
 
   const [geoReady, setGeoReady] = useState(false)
   const [layers, setLayers]     = useState({ arcs: true, heat: true, markers: true })
@@ -123,6 +124,8 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
     if (arcsRef.current.length > maxArcs) arcsRef.current.shift()
     heatPtsRef.current.push([x1, y1])
     if (heatPtsRef.current.length > 300) heatPtsRef.current.shift()
+    visitHistoryRef.current.push(v)
+    if (visitHistoryRef.current.length > 200) visitHistoryRef.current.shift()
   }, [project, maxArcs])
 
   // ── Flush buffered visits once geo is ready ───────────────
@@ -368,6 +371,26 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
       else if (cv) { spawnArc(v, cv.width / (devicePixelRatio || 1), cv.height / (devicePixelRatio || 1)) }
     }
   }, [liveVisits, spawnArc])
+
+  // ── Arc cycling — re-spawn historical visits periodically ─
+  useEffect(() => {
+    if (!geoReady) return
+    const id = setInterval(() => {
+      const history = visitHistoryRef.current
+      if (!history.length) return
+      const cv = canvasRef.current
+      if (!cv) return
+      const dpr = devicePixelRatio || 1
+      const w = cv.width / dpr, h = cv.height / dpr
+      // pick 1-3 random past visits and re-spawn their arcs
+      const count = 1 + Math.floor(Math.random() * 2)
+      for (let i = 0; i < count; i++) {
+        const v = history[Math.floor(Math.random() * history.length)]
+        spawnArc(v, w, h)
+      }
+    }, 5000)
+    return () => clearInterval(id)
+  }, [geoReady, spawnArc])
 
   // ── Canvas init + RAF ─────────────────────────────────────
   useEffect(() => {

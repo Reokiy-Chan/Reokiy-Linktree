@@ -9,6 +9,8 @@ const NAV = [
   { href: '/admin/geography', label: 'Geography', icon: '↗' },
   { href: '/admin/traffic', label: 'Traffic', icon: '⊡' },
   { href: '/admin/sessions', label: 'Sessions', icon: '⊞' },
+  { href: '/admin/codes', label: 'Codes', icon: '⊛' },
+  { href: '/admin/raffles', label: 'Sorteos', icon: '🎲' },
 ]
 
 interface LiveData { activeLastHour: number; todayTotal: number }

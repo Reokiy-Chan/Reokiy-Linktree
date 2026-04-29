@@ -1,0 +1,23 @@
+[
+  {
+    "code": "TEST",
+    "label": "test",
+    "rewardType": "fansly",
+    "rewardContent": "HD7HAS96HD7HAS96HD7HAS96",
+    "rewardTitle": "testtest",
+    "giftAnimation": true,
+    "giftBoxColor": "#c41428",
+    "giftRibbonColor": "#fef0f4",
+    "giftPattern": "stripes",
+    "giftPatternColor": "#ffffff",
+    "scratchCard": true,
+    "scratchCardColor": "#2a1a2e",
+    "scratchAccentColor": "#c41428",
+    "scratchDifficulty": "normal",
+    "maxUses": null,
+    "id": "290b3472-25e8-49fc-8844-962a4eafb61f",
+    "used": false,
+    "useCount": 1,
+    "createdAt": "2026-04-28T21:26:14.005Z"
+  }
+]

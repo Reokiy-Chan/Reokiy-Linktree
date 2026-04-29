@@ -1,4 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from 'crypto'
+import { cookies } from 'next/headers'
+import type { NextRequest } from 'next/server'
 
 export function hashPassword(password: string): string {
   return createHash('sha256').update(password + 'reokiy_salt').digest('hex')
@@ -23,4 +25,30 @@ export function verifyToken(token: string, secret: string): boolean {
   } catch {
     return false
   }
+}
+
+/**
+ * Validates the admin session cookie.
+ * Works both in route handlers (where `req` is available) and in server
+ * actions / layouts (where we fall back to the Next.js `cookies()` helper).
+ */
+export async function validateSession(req?: NextRequest): Promise<boolean> {
+  const secret = process.env.ADMIN_SECRET ?? 'reokiy_secret_change_me'
+
+  // Prefer reading directly from the request headers when available
+  // (avoids the async cookies() overhead in hot API paths)
+  if (req) {
+    const cookieHeader = req.headers.get('cookie') ?? ''
+    const token = cookieHeader
+      .split(';')
+      .map(c => c.trim())
+      .find(c => c.startsWith('admin_session='))
+      ?.slice('admin_session='.length)
+    return !!(token && verifyToken(token, secret))
+  }
+
+  // Fallback: Next.js cookies() helper (server components / route handlers)
+  const jar = await cookies()
+  const token = jar.get('admin_session')?.value
+  return !!(token && verifyToken(token, secret))
 }

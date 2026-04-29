@@ -24,10 +24,10 @@ export default function AdminLogin() {
         // router.push + router.refresh() has a race condition in App Router.
         window.location.replace('/admin')
       } else {
-        setError('Contraseña incorrecta')
+        setError('Wrong password')
       }
     } catch {
-      setError('Error de conexión')
+      setError('Connection error')
     } finally {
       setLoading(false)
     }
@@ -48,7 +48,7 @@ export default function AdminLogin() {
         <div style={{ textAlign: 'center' }}>
           <img src="/images/logo.png" alt="reokiy" style={{ width: 48, height: 48, borderRadius: '50%', marginBottom: 12, objectFit: 'cover' }} />
           <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 22, color: 'var(--text)', marginBottom: 4 }}>
-            panel de control
+            control panel
           </div>
           <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             reokiy • admin
@@ -100,12 +100,12 @@ export default function AdminLogin() {
               transition: 'all 0.2s',
             }}
           >
-            {loading ? 'entrando…' : 'entrar'}
+            {loading ? 'signing in…' : 'sign in'}
           </button>
         </form>
 
         <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.2)', letterSpacing: '0.08em', textAlign: 'center' }}>
-          configura ADMIN_PASSWORD en .env
+          set ADMIN_PASSWORD in .env
         </div>
       </div>
     </main>

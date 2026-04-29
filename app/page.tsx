@@ -57,6 +57,8 @@ export default function Home() {
   const [hoveredLink, setHoveredLink] = useState<number | null>(null)
   const [stars, setStars] = useState<Star[]>([])
   const [aboutOpen, setAboutOpen] = useState(false)
+  const [raffleCount, setRaffleCount] = useState(0)
+  const [raffleHovered, setRaffleHovered] = useState(false)
   const { avatarUrl } = useDiscord()
 
   useEffect(() => {
@@ -68,6 +70,13 @@ export default function Home() {
       delay: Math.random() * 4,
       duration: Math.random() * 3 + 2,
     })))
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/raffles')
+      .then(r => r.json())
+      .then((d: { active?: unknown[] }) => setRaffleCount(d.active?.length ?? 0))
+      .catch(() => {})
   }, [])
 
   return (
@@ -191,6 +200,49 @@ export default function Home() {
           >
             <span>✦</span> about me <span>✦</span>
           </button>
+
+          {/* Sorteos — link card */}
+          <a
+            href="/raffles"
+            onMouseEnter={() => setRaffleHovered(true)}
+            onMouseLeave={() => setRaffleHovered(false)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 14,
+              padding: '13px 16px', width: '100%',
+              background: raffleHovered ? 'rgba(196,20,40,0.1)' : 'var(--glass)',
+              backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+              border: `1px solid ${raffleHovered ? 'rgba(196,20,40,0.45)' : 'rgba(196,20,40,0.22)'}`,
+              borderRadius: 14, cursor: 'pointer',
+              transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
+              transform: raffleHovered ? 'translateX(4px)' : 'none',
+              boxShadow: raffleHovered ? '0 4px 24px rgba(196,20,40,0.15), inset 0 0 0 1px rgba(196,20,40,0.15)' : 'none',
+              textDecoration: 'none',
+              animation: 'fadeInUp 0.5s ease 0.55s both',
+              position: 'relative', overflow: 'hidden',
+            }}
+          >
+            {raffleCount > 0 && (
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, transparent, rgba(196,20,40,0.04), transparent)', animation: 'shimmer 3s ease-in-out infinite', pointerEvents: 'none' }} />
+            )}
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(196,20,40,0.18)', border: '1px solid rgba(196,20,40,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.25s ease', boxShadow: raffleHovered ? '0 0 16px rgba(196,20,40,0.35)' : 'none', fontSize: 18 }}>
+              🎲
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text)', letterSpacing: '0.05em', textTransform: 'lowercase' }}>sorteos</div>
+                {raffleCount > 0 && (
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 7, padding: '1px 6px', borderRadius: 20, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse-dot 2s ease-in-out infinite' }} />
+                    {raffleCount} activo{raffleCount !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 13, color: 'var(--text-muted)' }}>
+                {raffleCount > 0 ? 'participa y gana premios ♡' : 'próximamente sorteos exclusivos'}
+              </div>
+            </div>
+            <div style={{ color: raffleHovered ? 'rgba(196,20,40,0.9)' : 'rgba(245,232,255,0.2)', transition: 'all 0.25s ease', transform: raffleHovered ? 'translateX(2px)' : 'none', fontSize: 14 }}>→</div>
+          </a>
 
           <div className="footer-text">reokiy • your lewd dumb elf 🖤</div>
         </div>

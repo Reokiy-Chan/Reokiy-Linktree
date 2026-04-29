@@ -69,7 +69,7 @@ export default function OverviewPage() {
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', ...S, fontSize: 10, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em' }}>
-      cargando…
+      loading…
     </div>
   )
   if (!stats) return null
