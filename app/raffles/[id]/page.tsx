@@ -12,7 +12,7 @@ function Countdown({ endsAt }: { endsAt: string }) {
   useEffect(() => {
     const calc = () => {
       const diff = new Date(endsAt).getTime() - Date.now()
-      if (diff <= 0) { setLeft('terminado'); return }
+      if (diff <= 0) { setLeft('completed'); return }
       const d = Math.floor(diff / 86400000)
       const h = Math.floor((diff % 86400000) / 3600000)
       const m = Math.floor((diff % 3600000) / 60000)
@@ -29,11 +29,11 @@ function Countdown({ endsAt }: { endsAt: string }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <div style={{
         width: 6, height: 6, borderRadius: '50%',
-        background: left === 'terminado' ? 'var(--primary)' : '#fbbf24',
-        boxShadow: left === 'terminado' ? 'none' : '0 0 8px #fbbf24',
-        animation: left !== 'terminado' ? 'pulse-dot 1.5s ease-in-out infinite' : 'none',
+        background: left === 'completed' ? 'var(--primary)' : '#fbbf24',
+        boxShadow: left === 'completed' ? 'none' : '0 0 8px #fbbf24',
+        animation: left !== 'completed' ? 'pulse-dot 1.5s ease-in-out infinite' : 'none',
       }} />
-      <span style={{ ...S, fontSize: 11, color: left === 'terminado' ? 'var(--primary)' : '#fbbf24', letterSpacing: '0.06em' }}>
+      <span style={{ ...S, fontSize: 11, color: left === 'completed' ? 'var(--primary)' : '#fbbf24', letterSpacing: '0.06em' }}>
         {left}
       </span>
     </div>
@@ -119,7 +119,7 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
           onMouseEnter={e => (e.currentTarget.style.color = 'rgba(254,240,244,0.6)')}
           onMouseLeave={e => (e.currentTarget.style.color = 'rgba(254,240,244,0.3)')}
         >
-          ← todos los sorteos
+          ← Other Giveaways
         </button>
 
         {loading ? (
@@ -148,18 +148,18 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
                   border: `1px solid ${isActive ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)'}`,
                   color: isActive ? '#4ade80' : 'rgba(254,240,244,0.3)',
                 }}>
-                  {isActive ? '● activo' : '○ terminado'}
+                  {isActive ? '● active' : '○ completed'}
                 </span>
               </div>
 
               <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
                 <span style={{ ...S, fontSize: 11, color: 'rgba(254,240,244,0.45)' }}>
-                  <span style={{ color: 'var(--text)', fontSize: 13 }}>{liveCount ?? raffle.entries.length}</span> participante{(liveCount ?? raffle.entries.length) !== 1 ? 's' : ''}
+                  <span style={{ color: 'var(--text)', fontSize: 13 }}>{liveCount ?? raffle.entries.length}</span> participant{(liveCount ?? raffle.entries.length) !== 1 ? 's' : ''}
                   {isActive && <span style={{ color: '#4ade80', marginLeft: 4, fontSize: 8 }}>●</span>}
                 </span>
                 {raffle.prizes.length > 0 && (
                   <span style={{ ...S, fontSize: 11, color: 'rgba(254,240,244,0.45)' }}>
-                    <span style={{ color: 'rgba(196,20,40,0.9)', fontSize: 13 }}>{raffle.prizes.length}</span> premio{raffle.prizes.length !== 1 ? 's' : ''}
+                    <span style={{ color: 'rgba(196,20,40,0.9)', fontSize: 13 }}>{raffle.prizes.length}</span> reward{raffle.prizes.length !== 1 ? 's' : ''}
                   </span>
                 )}
                 {raffle.endsAt && isActive && <Countdown endsAt={raffle.endsAt} />}
@@ -174,7 +174,7 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
             {/* Description */}
             {raffle.description && (
               <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 16, padding: '18px 20px' }}>
-                <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 10 }}>descripción</div>
+                <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 10 }}>Description</div>
                 <div style={{ ...S, fontSize: 13, color: 'rgba(254,240,244,0.7)', lineHeight: 1.8 }}>{raffle.description}</div>
               </div>
             )}
@@ -182,7 +182,7 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
             {/* Prizes */}
             {raffle.prizes.length > 0 && (
               <div style={{ background: 'rgba(196,20,40,0.04)', border: '1px solid rgba(196,20,40,0.14)', borderRadius: 16, padding: '18px 20px' }}>
-                <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 14 }}>premios</div>
+                <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 14 }}>REWARDS</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {raffle.prizes.map((p, i) => (
                     <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -218,16 +218,16 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
             {/* Participation form */}
             {isActive && !alreadyEntered && (
               <div style={{ background: 'rgba(196,20,40,0.05)', border: '1px solid rgba(196,20,40,0.22)', borderRadius: 16, padding: '22px 20px' }}>
-                <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>participar</div>
+                <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>participate</div>
                 <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.32)', marginBottom: 16, lineHeight: 1.6 }}>
-                  Introduce tu username de Discord exactamente como aparece en tu perfil.
+                  Introduce your Discord username bellow. Be sure to use the exact one
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input
                     value={username}
                     onChange={e => { setUsername(e.target.value); setMsg(null) }}
                     onKeyDown={e => { if (e.key === 'Enter') handleEnter() }}
-                    placeholder="tu username de Discord"
+                    placeholder="your Discord username"
                     style={{
                       ...S, flex: 1, padding: '12px 14px',
                       background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,20,40,0.2)',
@@ -245,7 +245,7 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
                       whiteSpace: 'nowrap', letterSpacing: '0.06em', transition: 'all 0.2s',
                     }}
                   >
-                    {entering ? '…' : '🎲 entrar'}
+                    {entering ? '…' : '🎲 join'}
                   </button>
                 </div>
                 {msg && (
@@ -269,7 +269,7 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
             {!isActive && raffle.entries.length > 0 && (
               <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 16, padding: '18px 20px' }}>
                 <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 12 }}>
-                  participantes ({raffle.entries.length})
+                  participants ({raffle.entries.length})
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 240, overflowY: 'auto' }}>
                   {raffle.entries.map((e, i) => (

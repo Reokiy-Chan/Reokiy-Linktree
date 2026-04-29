@@ -37,23 +37,23 @@ const CONTENT_META: Record<RewardType, { label: string; placeholder: string; isC
 }
 
 const GIFT_PATTERNS: { value: GiftPattern; label: string }[] = [
-  { value: 'none',     label: 'Sin patrón' },
-  { value: 'dots',     label: 'Puntos' },
-  { value: 'stripes',  label: 'Rayas' },
-  { value: 'stars',    label: 'Estrellas' },
-  { value: 'hearts',   label: 'Corazones' },
-  { value: 'checks',   label: 'Tablero' },
-  { value: 'diamonds', label: 'Diamantes' },
-  { value: 'waves',    label: 'Ondas' },
+  { value: 'none',     label: 'No Pattern' },
+  { value: 'dots',     label: 'Dots' },
+  { value: 'stripes',  label: 'Stripes' },
+  { value: 'stars',    label: 'Stars' },
+  { value: 'hearts',   label: 'Hearts' },
+  { value: 'checks',   label: 'Checks' },
+  { value: 'diamonds', label: 'Diamonds' },
+  { value: 'waves',    label: 'Waves' },
   { value: 'zigzag',   label: 'Zigzag' },
-  { value: 'custom',   label: 'Imagen personalizada' },
+  { value: 'custom',   label: 'Custom Image' },
 ]
 
 const SCRATCH_DIFFICULTIES: { value: string; label: string; hint: string }[] = [
-  { value: 'easy',      label: 'Fácil',      hint: 'Pincel muy grande — rápido de rascar' },
-  { value: 'normal',    label: 'Normal',     hint: 'Tamaño estándar' },
-  { value: 'hard',      label: 'Difícil',    hint: 'Pincel pequeño — hay que esforzarse' },
-  { value: 'very_hard', label: 'Muy difícil', hint: 'Pincel minúsculo — mucha paciencia' },
+  { value: 'easy',      label: 'Easy',        hint: 'Silvy Dick is easy aswell :3' },
+  { value: 'normal',    label: 'Normal',      hint: 'Standard Size' },
+  { value: 'hard',      label: 'Hard',        hint: 'like lucy dih :3' },
+  { value: 'very_hard', label: 'Very Hard',   hint: 'OH SHI THIS IS SO HARD' },
 ]
 
 // ─── Mini GiftBox preview ────────────────────────────────────────────────────
@@ -506,7 +506,7 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
 
                     {/* Pattern selector */}
                     <div style={{ marginBottom: 10 }}>
-                      <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Patrón de estampado</label>
+                      <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Pattern</label>
                       <select
                         value={giftPattern}
                         onChange={e => { setGiftPattern(e.target.value as GiftPattern); setPatternFile(null); setGiftPatternImage(null) }}
@@ -573,7 +573,7 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
                       🪄 scratch card
                     </div>
                     <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)' }}>
-                      El usuario rasca para revelar el premio
+                      Make the users reveal the price :0
                     </div>
                   </div>
                   <button type="button" onClick={() => setScratchCard(v => !v)} style={toggleStyle(scratchCard)} aria-label="Toggle scratch card">
@@ -631,8 +631,8 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
 
               {/* ── Multi-use section ── */}
               <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(196,20,40,0.1)', borderRadius: 10, padding: '14px 16px' }}>
-                <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)', marginBottom: 4 }}>🔢 Número de usos</div>
-                <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginBottom: 12 }}>Define cuántas veces se puede canjear este código</div>
+                <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)', marginBottom: 4 }}>🔢 Usage</div>
+                <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginBottom: 12 }}>Define how many times this code can be used</div>
                 <div style={{ display: 'flex', gap: 5, marginBottom: maxUsesMode === 'multi' ? 10 : 0 }}>
                   {(['single', 'multi', 'unlimited'] as const).map(mode => (
                     <button key={mode} type="button" onClick={() => setMaxUsesMode(mode)}
@@ -644,13 +644,13 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
                         color: maxUsesMode === mode ? 'var(--text)' : 'rgba(254,240,244,0.4)',
                         transition: 'all 0.15s',
                       }}>
-                      {mode === 'single' ? '1 uso' : mode === 'multi' ? 'N usos' : '∞ ilimitado'}
+                      {mode === 'single' ? 'Once' : mode === 'multi' ? 'N Uses' : '∞ Unlimited'}
                     </button>
                   ))}
                 </div>
                 {maxUsesMode === 'multi' && (
                   <div>
-                    <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Número de usos permitidos</label>
+                    <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Number of uses</label>
                     <input
                       type="number" min="2" max="9999"
                       value={maxUsesCount}
@@ -663,7 +663,7 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
                 )}
                 {maxUsesMode === 'unlimited' && (
                   <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginTop: 4 }}>
-                    Este código nunca se agotará — cualquiera con el código puede canjearlo ✦
+                    This code is unilimited, it will never expire and will be avaliable forever ✦
                   </div>
                 )}
               </div>
@@ -781,9 +781,9 @@ export default function CodesPage() {
                   <div>{new Date(c.createdAt).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}</div>
                   {/* Multi-use indicator */}
                   {c.maxUses === null ? (
-                    <div style={{ color: '#4ade8088', marginTop: 2 }}>∞ ilimitado · {c.useCount ?? 0} usos</div>
+                    <div style={{ color: '#4ade8088', marginTop: 2 }}>∞ unlimited · {c.useCount ?? 0} uses</div>
                   ) : (c.maxUses ?? 1) > 1 ? (
-                    <div style={{ color: 'rgba(196,20,40,0.5)', marginTop: 2 }}>{c.useCount ?? 0}/{c.maxUses} usos</div>
+                    <div style={{ color: 'rgba(196,20,40,0.5)', marginTop: 2 }}>{c.useCount ?? 0}/{c.maxUses} uses</div>
                   ) : c.usedAt ? (
                     <div style={{ color: 'rgba(196,20,40,0.4)', marginTop: 2 }}>redeemed {new Date(c.usedAt).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}</div>
                   ) : null}

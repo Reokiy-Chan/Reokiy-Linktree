@@ -229,16 +229,16 @@ export default function Home() {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text)', letterSpacing: '0.05em', textTransform: 'lowercase' }}>sorteos</div>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text)', letterSpacing: '0.05em', textTransform: 'lowercase' }}>Giveaways</div>
                 {raffleCount > 0 && (
                   <span style={{ fontFamily: 'var(--font-body)', fontSize: 7, padding: '1px 6px', borderRadius: 20, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 3 }}>
                     <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse-dot 2s ease-in-out infinite' }} />
-                    {raffleCount} activo{raffleCount !== 1 ? 's' : ''}
+                    {raffleCount} active{raffleCount !== 1 ? 's' : ''}
                   </span>
                 )}
               </div>
               <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 13, color: 'var(--text-muted)' }}>
-                {raffleCount > 0 ? 'participa y gana premios ♡' : 'próximamente sorteos exclusivos'}
+                {raffleCount > 0 ? 'participate and win prices ♡' : 'starting soon :3'}
               </div>
             </div>
             <div style={{ color: raffleHovered ? 'rgba(196,20,40,0.9)' : 'rgba(245,232,255,0.2)', transition: 'all 0.25s ease', transform: raffleHovered ? 'translateX(2px)' : 'none', fontSize: 14 }}>→</div>

@@ -84,7 +84,7 @@ function RaffleCard({ raffle }: { raffle: Raffle }) {
             border: `1px solid ${isActive ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)'}`,
             color: isActive ? '#4ade80' : 'rgba(254,240,244,0.3)',
           }}>
-            {isActive ? '● activo' : '○ terminado'}
+            {isActive ? '● active' : '○ completed'}
           </span>
         </div>
 
@@ -100,17 +100,17 @@ function RaffleCard({ raffle }: { raffle: Raffle }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.3)' }}>
-              <span style={{ color: 'rgba(254,240,244,0.7)' }}>{raffle.entries.length}</span> participante{raffle.entries.length !== 1 ? 's' : ''}
+              <span style={{ color: 'rgba(254,240,244,0.7)' }}>{raffle.entries.length}</span> participant{raffle.entries.length !== 1 ? 's' : ''}
             </span>
             {raffle.prizes.length > 0 && (
               <span style={{ ...S, fontSize: 9, color: 'rgba(196,20,40,0.7)' }}>
-                🎁 {raffle.prizes.length} premio{raffle.prizes.length !== 1 ? 's' : ''}
+                🎁 {raffle.prizes.length} reward{raffle.prizes.length !== 1 ? 's' : ''}
               </span>
             )}
             {isActive && raffle.endsAt && <Countdown endsAt={raffle.endsAt} />}
             {!isActive && raffle.endsAt && (
               <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.25)' }}>
-                terminó {new Date(raffle.endsAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
+                ended {new Date(raffle.endsAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
               </span>
             )}
           </div>
@@ -119,7 +119,7 @@ function RaffleCard({ raffle }: { raffle: Raffle }) {
               <span style={{ ...S, fontSize: 9, color: '#ffd700' }}>🏆 {raffle.winnerId}</span>
             )}
             <span style={{ ...S, fontSize: 9, color: hovered ? 'rgba(196,20,40,0.8)' : 'rgba(254,240,244,0.2)', transition: 'color 0.2s', letterSpacing: '0.06em' }}>
-              ver →
+              see →
             </span>
           </div>
         </div>
@@ -195,24 +195,24 @@ export default function RafflesPage() {
           onMouseEnter={e => (e.currentTarget.style.color = 'rgba(254,240,244,0.6)')}
           onMouseLeave={e => (e.currentTarget.style.color = 'rgba(254,240,244,0.3)')}
         >
-          ← volver
+          ← Back
         </button>
 
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
             <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 36, color: 'var(--text)', lineHeight: 1 }}>
-              sorteos
+              Giveaways
             </div>
             {connected && hasActive && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 6 }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 8px #4ade80', animation: 'pulse-dot 2s ease-in-out infinite' }} />
-                <span style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>en vivo</span>
+                <span style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>on live</span>
               </div>
             )}
           </div>
           <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.08em' }}>
-            gana premios exclusivos participando en los sorteos
+            win exclusive rewards here
           </div>
         </div>
 
@@ -231,7 +231,7 @@ export default function RafflesPage() {
                 boxShadow: tab === t ? 'inset 0 0 0 1px rgba(196,20,40,0.3)' : 'none',
               }}
             >
-              {t === 'active' ? 'activos' : 'terminados'}
+              {t === 'active' ? 'active' : 'completed'}
               {(t === 'active' ? raffles.active : raffles.ended).length > 0 && (
                 <span style={{
                   marginLeft: 6, padding: '1px 6px', borderRadius: 10,
@@ -254,10 +254,10 @@ export default function RafflesPage() {
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(196,20,40,0.15)', borderRadius: 16, padding: '60px 24px', textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>🎲</div>
             <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 18, color: 'rgba(254,240,244,0.4)', marginBottom: 6 }}>
-              {tab === 'active' ? 'no hay sorteos activos' : 'no hay sorteos terminados'}
+              {tab === 'active' ? 'there is no active giveaways' : 'there is not ended giveaways... yet'}
             </div>
             <div style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.2)', letterSpacing: '0.08em' }}>
-              {tab === 'active' ? 'vuelve pronto para participar' : 'los sorteos finalizados aparecerán aquí'}
+              {tab === 'active' ? 'maybe you could come check soon' : 'they can appear at any moment...'}
             </div>
           </div>
         ) : (

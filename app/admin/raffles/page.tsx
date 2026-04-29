@@ -14,7 +14,7 @@ function Countdown({ endsAt }: { endsAt: string }) {
   useEffect(() => {
     const update = () => {
       const diff = new Date(endsAt).getTime() - Date.now()
-      if (diff <= 0) { setRemaining('finalizado'); return }
+      if (diff <= 0) { setRemaining('completed'); return }
       const d = Math.floor(diff / 86400000)
       const h = Math.floor((diff % 86400000) / 3600000)
       const m = Math.floor((diff % 3600000) / 60000)
@@ -68,7 +68,7 @@ function RaffleModal({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim()) { setError('El título es obligatorio'); return }
+    if (!title.trim()) { setError('Title is required'); return }
     setSaving(true); setError('')
     try {
       const body = {
@@ -85,7 +85,7 @@ function RaffleModal({
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Error'); setSaving(false); return }
       onSaved(data.raffle)
-    } catch { setError('Error de red') }
+    } catch { setError('Network Error') }
     setSaving(false)
   }
 
@@ -101,7 +101,7 @@ function RaffleModal({
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ ...S, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.75)' }}>
-            {initial ? 'editar sorteo' : 'nuevo sorteo'}
+            {initial ? 'Edit Giveaway' : 'New Giveaway'}
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(254,240,244,0.35)', cursor: 'pointer', fontSize: 16 }}>✕</button>
         </div>
@@ -109,12 +109,12 @@ function RaffleModal({
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Título *</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Sorteo de Navidad" style={fieldStyle} />
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Christmast Giveaway" style={fieldStyle} />
           </div>
           <div>
             <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Descripción</label>
             <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3}
-              placeholder="Descripción del sorteo…"
+              placeholder="Giveaway Description…"
               style={{ ...fieldStyle, resize: 'vertical', lineHeight: 1.5 }} />
           </div>
 
@@ -125,7 +125,7 @@ function RaffleModal({
               <div style={{ display: 'flex', gap: 6 }}>
                 <input value={prizeInput} onChange={e => setPrizeInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPrize() } }}
-                  placeholder="Nombre del premio…"
+                  placeholder="Reward Name…"
                   style={{ ...fieldStyle, flex: 1 }} />
                 <button type="button" onClick={addPrize}
                   style={{ ...S, padding: '0 12px', background: 'rgba(196,20,40,0.1)', border: '1px solid rgba(196,20,40,0.25)', borderRadius: 8, color: 'rgba(254,240,244,0.6)', fontSize: 10, cursor: 'pointer' }}>
@@ -133,7 +133,7 @@ function RaffleModal({
                 </button>
               </div>
               <input value={prizeDesc} onChange={e => setPrizeDesc(e.target.value)}
-                placeholder="Descripción del premio (opcional)…"
+                placeholder="Reward Description (opcional)…"
                 style={{ ...fieldStyle, fontSize: 10 }} />
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
@@ -154,8 +154,8 @@ function RaffleModal({
 
           {/* Max winners */}
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(196,20,40,0.1)', borderRadius: 10, padding: '12px 14px' }}>
-            <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>🏆 Número de ganadores</label>
-            <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginBottom: 8 }}>¿Cuántos ganadores se van a elegir?</div>
+            <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>🏆 Winners Number</label>
+            <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginBottom: 8 }}>¿How many winners?</div>
             <input type="number" min="1" max="99" value={maxWinners} onChange={e => setMaxWinners(e.target.value)}
               style={{ ...fieldStyle, fontFamily: 'monospace', width: 80 }} />
           </div>
@@ -170,8 +170,8 @@ function RaffleModal({
           {/* Auto-end toggle */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(196,20,40,0.12)', borderRadius: 10, padding: '12px 14px' }}>
             <div>
-              <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>Auto-finalizar</div>
-              <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginTop: 2 }}>Elige ganador automáticamente al llegar la fecha</div>
+              <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>Auto-complete</div>
+              <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginTop: 2 }}>Choose automaticly the winner once the date</div>
             </div>
             <button type="button" onClick={() => setAutoEnd(v => !v)}
               style={{ width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', background: autoEnd ? 'rgba(196,20,40,0.7)' : 'rgba(255,255,255,0.1)', position: 'relative', transition: 'background 0.2s', flexShrink: 0, marginLeft: 12 }}>
@@ -190,7 +190,7 @@ function RaffleModal({
               fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
               cursor: saving ? 'not-allowed' : 'pointer',
             }}>
-            {saving ? 'guardando…' : initial ? 'guardar cambios' : 'crear sorteo'}
+            {saving ? 'saving…' : initial ? 'gave changes' : 'create giveaway'}
           </button>
         </form>
       </div>
@@ -226,14 +226,14 @@ function ParticipantsDrawer({
   const canPickMore = raffle.status === 'active' && winners.length < maxWinners
 
   const pick = async () => {
-    if (!confirm(`¿Elegir ganador${maxWinners > 1 ? ` (${winners.length + 1}/${maxWinners})` : ''} de "${raffle.title}"?`)) return
+    if (!confirm(`¿Choose Winner${maxWinners > 1 ? ` (${winners.length + 1}/${maxWinners})` : ''} of "${raffle.title}"?`)) return
     setPicking(true)
     const body: Record<string, string> = {}
     if (selectedPrize) body.prizeId = selectedPrize
     const res = await fetch(`/api/admin/raffles/${raffle.id}/pick`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     const data = await res.json()
     if (res.ok) {
-      showToast(`🏆 Ganador: ${data.winner.discordUsername}${data.winner.prizeLabel ? ` — ${data.winner.prizeLabel}` : ''}`)
+      showToast(`🏆 Winner: ${data.winner.discordUsername}${data.winner.prizeLabel ? ` — ${data.winner.prizeLabel}` : ''}`)
       onUpdated(data.raffle)
       setSelectedPrize('')
     } else {
@@ -252,7 +252,7 @@ function ParticipantsDrawer({
     })
     const data = await res.json()
     if (res.ok) {
-      showToast(`✓ ${addInput.trim()} añadido`)
+      showToast(`✓ ${addInput.trim()} Added`)
       onUpdated({ ...raffle, entries: [...raffle.entries, { discordUsername: addInput.trim(), enteredAt: new Date().toISOString() }] })
       setAddInput('')
     } else {
@@ -262,7 +262,7 @@ function ParticipantsDrawer({
   }
 
   const removeParticipant = async (username: string) => {
-    if (!confirm(`¿Eliminar a ${username} del sorteo?`)) return
+    if (!confirm(`¿Remove ${username} From Giveaway?`)) return
     setRemoving(username)
     const res = await fetch(`/api/admin/raffles/${raffle.id}/participants`, {
       method: 'DELETE',
@@ -271,7 +271,7 @@ function ParticipantsDrawer({
     })
     const data = await res.json()
     if (res.ok) {
-      showToast(`✓ ${username} eliminado`)
+      showToast(`✓ ${username} removed`)
       onUpdated({ ...raffle, entries: raffle.entries.filter(e => e.discordUsername !== username) })
     } else {
       showToast(`⚠ ${data.error}`, false)
@@ -315,7 +315,7 @@ function ParticipantsDrawer({
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 18, color: 'var(--text)', lineHeight: 1.2 }}>{raffle.title}</div>
             <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', marginTop: 4, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-              {raffle.entries.length} participante{raffle.entries.length !== 1 ? 's' : ''} · {winners.length}/{maxWinners} ganador{maxWinners !== 1 ? 'es' : ''}
+              {raffle.entries.length} participant{raffle.entries.length !== 1 ? 's' : ''} · {winners.length}/{maxWinners} winner{maxWinners !== 1 ? 's' : ''}
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(254,240,244,0.35)', cursor: 'pointer', fontSize: 16 }}>✕</button>
@@ -332,7 +332,7 @@ function ParticipantsDrawer({
                 color: tab === t ? 'var(--text)' : 'rgba(254,240,244,0.35)',
                 transition: 'all 0.15s',
               }}>
-              {t === 'participants' ? `👥 Participantes (${raffle.entries.length})` : `🏆 Ganadores (${winners.length})`}
+              {t === 'participants' ? `👥 Participants (${raffle.entries.length})` : `🏆 Winners (${winners.length})`}
             </button>
           ))}
         </div>
@@ -349,13 +349,13 @@ function ParticipantsDrawer({
             {/* Pick winner controls */}
             {raffle.status === 'active' && (
               <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(196,20,40,0.15)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ ...S, fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.4)', marginBottom: 2 }}>🎲 Elegir ganador</div>
+                <div style={{ ...S, fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.4)', marginBottom: 2 }}>🎲 Choose Winners</div>
                 {raffle.prizes.length > 0 && canPickMore && (
                   <div>
-                    <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', display: 'block', marginBottom: 4 }}>Asignar premio (opcional)</label>
+                    <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', display: 'block', marginBottom: 4 }}>Assign Reward (Optional)</label>
                     <select value={selectedPrize} onChange={e => setSelectedPrize(e.target.value)}
                       style={{ ...fieldStyle, cursor: 'pointer' }}>
-                      <option value="">— Sin premio específico —</option>
+                      <option value="">— No Specific Reward —</option>
                       {raffle.prizes.map(p => (
                         <option key={p.id} value={p.id}>{p.label}</option>
                       ))}
@@ -371,7 +371,7 @@ function ParticipantsDrawer({
                     cursor: picking || raffle.entries.length === 0 || !canPickMore ? 'not-allowed' : 'pointer',
                     opacity: raffle.entries.length === 0 || !canPickMore ? 0.4 : 1,
                   }}>
-                  {picking ? 'eligiendo…' : !canPickMore ? `✓ todos los ganadores elegidos (${winners.length}/${maxWinners})` : `🎲 elegir ganador ${maxWinners > 1 ? `(${winners.length + 1}/${maxWinners})` : ''}`}
+                  {picking ? 'cHOOSING…' : !canPickMore ? `✓ all the winners had been chosed (${winners.length}/${maxWinners})` : `🎲 choose winner ${maxWinners > 1 ? `(${winners.length + 1}/${maxWinners})` : ''}`}
                 </button>
               </div>
             )}
@@ -380,7 +380,7 @@ function ParticipantsDrawer({
             <div style={{ display: 'flex', gap: 6 }}>
               <input value={addInput} onChange={e => setAddInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addParticipant() }}
-                placeholder="Añadir usuario de Discord…"
+                placeholder="Add Discord Username…"
                 style={fieldStyle} />
               <button onClick={addParticipant} disabled={adding || !addInput.trim()}
                 style={{ ...S, padding: '0 12px', background: 'rgba(196,20,40,0.1)', border: '1px solid rgba(196,20,40,0.25)', borderRadius: 7, color: 'rgba(254,240,244,0.6)', fontSize: 10, cursor: 'pointer', flexShrink: 0 }}>
@@ -391,23 +391,23 @@ function ParticipantsDrawer({
             {/* Search + export */}
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar participante…"
+                placeholder="Search Participant…"
                 style={{ ...fieldStyle, flex: 1 }} />
               <button onClick={exportCSV}
                 style={{ ...S, padding: '7px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 7, color: 'rgba(254,240,244,0.4)', fontSize: 9, cursor: 'pointer', flexShrink: 0 }}
-                title="Exportar CSV">
+                title="Export CSV">
                 ↓ CSV
               </button>
             </div>
 
             {/* Participants list */}
             <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-              {filteredEntries.length} participante{filteredEntries.length !== 1 ? 's' : ''}
+              {filteredEntries.length} Participant{filteredEntries.length !== 1 ? 's' : ''}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {filteredEntries.length === 0 ? (
                 <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.2)', textAlign: 'center', padding: '20px 0' }}>
-                  {search ? 'Sin resultados' : 'Sin participantes aún'}
+                  {search ? 'No Results' : 'Still No Participants'}
                 </div>
               ) : filteredEntries.map((entry, i) => {
                 const isWinner = winnerUsernames.has(entry.discordUsername.toLowerCase())
@@ -449,7 +449,7 @@ function ParticipantsDrawer({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {winners.length === 0 ? (
               <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.2)', textAlign: 'center', padding: '32px 0' }}>
-                Aún no hay ganadores
+                Still no winners tho
               </div>
             ) : winners.map((w, i) => (
               <div key={i} style={{
@@ -475,7 +475,7 @@ function ParticipantsDrawer({
 
             {canPickMore && (
               <div style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.3)', textAlign: 'center', padding: '8px 0' }}>
-                Faltan {maxWinners - winners.length} ganador{maxWinners - winners.length !== 1 ? 'es' : ''} por elegir
+                There's {maxWinners - winners.length} winners{maxWinners - winners.length !== 1 ? 's' : ''} Ramaining for choose
               </div>
             )}
           </div>
@@ -557,7 +557,7 @@ export default function RafflesPage() {
         border: `1px solid ${isActive ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
         color: isActive ? '#4ade80' : 'rgba(254,240,244,0.3)',
       }}>
-        {isActive ? '● activo' : '○ ended'}
+        {isActive ? '● active' : '○ ended'}
       </span>
     )
   }
@@ -570,10 +570,10 @@ export default function RafflesPage() {
       <div style={{ maxWidth: 760, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: 'var(--text)', lineHeight: 1.1 }}>sorteos</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: 'var(--text)', lineHeight: 1.1 }}>Giveaways</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
               <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                {active.length} activos · {ended.length} terminados
+                {active.length} active · {ended.length} completed
               </div>
               {connected && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -649,7 +649,7 @@ export default function RafflesPage() {
                   <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
                     <button onClick={() => setViewing(r)}
                       style={{ ...S, padding: '5px 10px', fontSize: 9, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, color: 'rgba(254,240,244,0.5)', cursor: 'pointer' }}>
-                      ver
+                      see
                     </button>
                     {r.status === 'active' && (
                       <button onClick={() => { setEditing(r); setShowModal(true) }}
