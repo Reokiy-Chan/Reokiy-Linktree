@@ -5,3 +5,5 @@ node_modules/
 package-lock.json
 turbocc.zip
 data/visits.json
+.vercel
+.env*.local

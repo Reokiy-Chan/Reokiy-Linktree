@@ -243,6 +243,53 @@ export default function Home() {
             </div>
             <div style={{ color: raffleHovered ? 'rgba(196,20,40,0.9)' : 'rgba(245,232,255,0.2)', transition: 'all 0.25s ease', transform: raffleHovered ? 'translateX(2px)' : 'none', fontSize: 14 }}>→</div>
           </a>
+          {/* ─── REDEEM CARD ───────────────────────────────── */}
+          <a
+            href="/redeem"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 14,
+              padding: '13px 16px', width: '100%',
+              background: 'var(--glass)',
+              backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+              border: '1px solid rgba(168,85,247,0.25)',
+              borderRadius: 14, cursor: 'pointer',
+              transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
+              textDecoration: 'none',
+              animation: 'fadeInUp 0.5s ease 0.6s both',
+              position: 'relative', overflow: 'hidden',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(168,85,247,0.1)';
+              e.currentTarget.style.borderColor = 'rgba(168,85,247,0.5)';
+              e.currentTarget.style.transform = 'translateX(4px)';
+              e.currentTarget.style.boxShadow = '0 4px 24px rgba(168,85,247,0.15), inset 0 0 0 1px rgba(168,85,247,0.15)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'var(--glass)';
+              e.currentTarget.style.borderColor = 'rgba(168,85,247,0.25)';
+              e.currentTarget.style.transform = 'none';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{
+              width: 38, height: 38, borderRadius: 10,
+              background: 'rgba(168,85,247,0.18)',
+              border: '1px solid rgba(168,85,247,0.35)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, fontSize: 18,
+            }}>
+              🎁
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text)', letterSpacing: '0.05em', textTransform: 'lowercase' }}>
+                redeem
+              </div>
+              <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 13, color: 'var(--text-muted)' }}>
+                claim your rewards ✧
+              </div>
+            </div>
+            <div style={{ color: 'rgba(245,232,255,0.2)', fontSize: 14 }}>→</div>
+          </a>
 
           <div className="footer-text">reokiy • your lewd dumb elf 🖤</div>
         </div>

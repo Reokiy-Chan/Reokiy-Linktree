@@ -1,0 +1,12 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /forreo
+
+# Host
+Host: https://reokiy.vercel.app
+
+# Sitemaps
+Sitemap: https://reokiy.vercel.app/sitemap.xml
