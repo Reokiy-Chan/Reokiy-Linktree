@@ -1,0 +1,30 @@
+python3 << 'EOF'
+import re
+
+for fname in ['/home/claude/turbocc/app/lib/codes.ts', '/home/claude/turbocc/app/lib/raffles.ts']:
+    with open(fname, 'r') as f:
+        content = f.read()
+    
+    # Replace the USE_KV const declaration with import
+    content = re.sub(
+        r'const USE_KV = !!\(process\.env\.UPSTASH_REDIS_REST_URL && process\.env\.UPSTASH_REDIS_REST_TOKEN\)\r?\n',
+        'import { USE_KV, getRedis } from \'./redis\'\n',
+        content
+    )
+    
+    # Replace all "const { Redis } = await import('@upstash/redis')\n    const kv = Redis.fromEnv()" patterns
+    content = re.sub(
+        r"const \{ Redis \} = await import\('@upstash/redis'\)\r?\n\s*const kv = Redis\.fromEnv\(\)",
+        'const kv = await getRedis()',
+        content
+    )
+    
+    with open(fname, 'w') as f:
+        f.write(content)
+    
+    print(f"Done: {fname}")
+    # Verify
+    matches = re.findall(r'Redis\.fromEnv\(\)', content)
+    print(f"  Remaining Redis.fromEnv() calls: {len(matches)}")
+
+EOF

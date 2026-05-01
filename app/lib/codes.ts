@@ -1,6 +1,6 @@
 import path from 'path'
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
-
+import { USE_KV, getRedis } from './redis'
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 export type RewardType = 'link' | 'text' | 'image' | 'fansly'
@@ -53,7 +53,6 @@ export interface RedeemCode {
 
 // ─── Storage ────────────────────────────────────────────────────────────────
 
-const USE_KV = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
 const KV_KEY = 'reokiy:codes'
 
 const DATA_DIR   = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'data')
@@ -86,8 +85,7 @@ function safeParse<T>(v: unknown): T | null {
 
 export async function listCodes(): Promise<RedeemCode[]> {
   if (USE_KV) {
-    const { Redis } = await import('@upstash/redis')
-    const kv = Redis.fromEnv()
+    const kv = await getRedis()
     const raw = await kv.hgetall(KV_KEY)
     if (!raw) return []
     return Object.values(raw)
@@ -99,8 +97,7 @@ export async function listCodes(): Promise<RedeemCode[]> {
 
 export async function getCode(id: string): Promise<RedeemCode | null> {
   if (USE_KV) {
-    const { Redis } = await import('@upstash/redis')
-    const kv = Redis.fromEnv()
+    const kv = await getRedis()
     const raw = await kv.hget(KV_KEY, id)
     return safeParse<RedeemCode>(raw)
   }
@@ -121,8 +118,7 @@ export async function createCode(data: Omit<RedeemCode, 'id' | 'used' | 'useCoun
     createdAt: new Date().toISOString(),
   }
   if (USE_KV) {
-    const { Redis } = await import('@upstash/redis')
-    const kv = Redis.fromEnv()
+    const kv = await getRedis()
     await kv.hset(KV_KEY, { [entry.id]: JSON.stringify(entry) })
     return entry
   }
@@ -135,8 +131,7 @@ export async function createCode(data: Omit<RedeemCode, 'id' | 'used' | 'useCoun
 // Returns true if use registered, false if exhausted/not found
 export async function markUsed(id: string): Promise<boolean> {
   if (USE_KV) {
-    const { Redis } = await import('@upstash/redis')
-    const kv = Redis.fromEnv()
+    const kv = await getRedis()
     const raw = await kv.hget(KV_KEY, id)
     const entry = safeParse<RedeemCode>(raw)
     if (!entry) return false
@@ -174,8 +169,7 @@ export async function markUsed(id: string): Promise<boolean> {
 
 export async function deleteCode(id: string): Promise<void> {
   if (USE_KV) {
-    const { Redis } = await import('@upstash/redis')
-    const kv = Redis.fromEnv()
+    const kv = await getRedis()
     await kv.hdel(KV_KEY, id)
     return
   }
