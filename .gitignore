@@ -7,3 +7,4 @@ turbocc.zip
 data/visits.json
 .vercel
 .env*.local
+data/presence.json
