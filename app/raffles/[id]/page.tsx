@@ -40,6 +40,81 @@ function Countdown({ endsAt }: { endsAt: string }) {
   )
 }
 
+// ─── Join celebration — printed ticket + confetti ────────────────────────────
+
+function JoinCelebration({ username, entryNumber, onDone }: { username: string; entryNumber: number; onDone: () => void }) {
+  const [confetti] = useState(() => {
+    const colors = ['#c41428', '#e8195c', '#4ade80', '#ffd700', '#fff', '#f0a0b8']
+    return Array.from({ length: 46 }, (_, id) => ({
+      id,
+      left: 6 + Math.random() * 88,
+      delay: 0.35 + Math.random() * 0.5,
+      duration: 1.4 + Math.random() * 1.4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 4 + Math.random() * 7,
+      drift: (Math.random() - 0.5) * 150,
+      rot: (Math.random() - 0.5) * 800,
+    }))
+  })
+
+  useEffect(() => {
+    const t = setTimeout(onDone, 3200)
+    return () => clearTimeout(t)
+  }, [onDone])
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(5,0,7,0.9)', backdropFilter: 'blur(8px)', animation: 'jc-fade 0.25s ease',
+    }} onClick={onDone}>
+      {confetti.map(c => (
+        <span key={c.id} style={{
+          position: 'absolute', top: '34%', left: `${c.left}%`,
+          width: c.size, height: c.id % 2 ? c.size : c.size * 0.5,
+          borderRadius: c.id % 2 ? '50%' : 2, background: c.color,
+          animation: `jc-confetti ${c.duration}s cubic-bezier(0.2,0.6,0.4,1) ${c.delay}s forwards`,
+          opacity: 0, pointerEvents: 'none',
+          '--drift': `${c.drift}px`, '--rot': `${c.rot}deg`,
+        } as React.CSSProperties} />
+      ))}
+
+      {/* Ticket sliding out of a slot */}
+      <div style={{ textAlign: 'center', overflow: 'visible' }}>
+        <div style={{ ...S, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(74,222,128,0.7)', marginBottom: 18, animation: 'jc-rise 0.4s ease both' }}>
+          🎲 you&apos;re in!
+        </div>
+        <div style={{
+          position: 'relative', width: 270, margin: '0 auto',
+          background: 'linear-gradient(160deg, #160009, #0d0010)',
+          border: '1px solid rgba(74,222,128,0.45)', borderRadius: 14,
+          padding: '20px 22px 16px',
+          boxShadow: '0 0 40px rgba(74,222,128,0.18)',
+          animation: 'jc-print 0.7s cubic-bezier(0.34,1.4,0.64,1) 0.1s both',
+        }}>
+          {/* Perforation */}
+          <div style={{ position: 'absolute', left: 10, right: 10, top: 54, borderTop: '1.5px dashed rgba(254,240,244,0.18)' }} />
+          <div style={{ position: 'absolute', width: 14, height: 14, borderRadius: '50%', background: '#050007', border: '1px solid rgba(74,222,128,0.3)', left: -8, top: 47 }} />
+          <div style={{ position: 'absolute', width: 14, height: 14, borderRadius: '50%', background: '#050007', border: '1px solid rgba(74,222,128,0.3)', right: -8, top: 47 }} />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 22 }}>
+            <span style={{ ...S, fontSize: 8, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.35)' }}>giveaway ticket</span>
+            <span style={{ fontFamily: 'monospace', fontSize: 14, color: '#4ade80', textShadow: '0 0 14px rgba(74,222,128,0.6)' }}>#{String(entryNumber).padStart(3, '0')}</span>
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 20, color: 'var(--text)', marginBottom: 4, wordBreak: 'break-all' }}>{username}</div>
+          <div style={{ ...S, fontSize: 8.5, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>good luck ✦</div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes jc-fade { from{opacity:0} to{opacity:1} }
+        @keyframes jc-rise { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes jc-print { 0%{opacity:0;transform:translateY(46px) scale(0.85);clip-path:inset(0 0 100% 0)} 60%{clip-path:inset(0 0 0% 0)} 100%{opacity:1;transform:translateY(0) scale(1);clip-path:inset(0 0 0% 0)} }
+        @keyframes jc-confetti { 0%{opacity:0;transform:translate(0,0) rotate(0)} 10%{opacity:1} 100%{opacity:0;transform:translate(var(--drift), 46vh) rotate(var(--rot))} }
+      `}</style>
+    </div>
+  )
+}
+
 export default function RafflePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
@@ -86,8 +161,10 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  const [celebrating, setCelebrating] = useState(false)
+
   const handleEnter = async () => {
-    if (!username.trim()) { setMsg({ text: 'Introduce tu username de Discord', ok: false }); return }
+    if (!username.trim()) { setMsg({ text: 'Enter your Discord username', ok: false }); return }
     setEntering(true); setMsg(null)
     try {
       const res = await fetch(`/api/raffles/${id}/enter`, {
@@ -96,9 +173,15 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
         body: JSON.stringify({ discordUsername: username.trim() }),
       })
       const data = await res.json()
-      setMsg({ text: res.ok ? '¡Participando! Suerte 🎲' : (data.error ?? 'Error'), ok: res.ok })
+      if (res.ok) {
+        setMsg({ text: 'You\'re in! Good luck 🎲', ok: true })
+        setLiveCount(c => (c ?? 0) + 1)
+        setCelebrating(true)
+      } else {
+        setMsg({ text: data.error ?? 'Error', ok: false })
+      }
     } catch {
-      setMsg({ text: 'Error de conexión', ok: false })
+      setMsg({ text: 'Connection error', ok: false })
     }
     setEntering(false)
   }
@@ -108,6 +191,13 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
+      {celebrating && (
+        <JoinCelebration
+          username={username.trim()}
+          entryNumber={liveCount ?? raffle?.entries.length ?? 1}
+          onDone={() => setCelebrating(false)}
+        />
+      )}
       <ParticlesBg />
       <div style={{ position: 'fixed', top: '25%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, height: 480, borderRadius: '50%', background: 'radial-gradient(circle, rgba(var(--primary-rgb),0.07) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
 
@@ -123,12 +213,12 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
         </button>
 
         {loading ? (
-          <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.3)', textAlign: 'center', padding: '80px 0', letterSpacing: '0.1em' }}>cargando…</div>
+          <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.3)', textAlign: 'center', padding: '80px 0', letterSpacing: '0.1em' }}>loading…</div>
         ) : notFound || !raffle ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>🎲</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 28, color: 'var(--text)', marginBottom: 10 }}>sorteo no encontrado</div>
-            <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.08em' }}>este sorteo no existe o ya terminó</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 28, color: 'var(--text)', marginBottom: 10 }}>giveaway not found</div>
+            <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.08em' }}>this giveaway doesn't exist or already ended</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeInUp 0.4s ease both' }}>
@@ -165,7 +255,7 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
                 {raffle.endsAt && isActive && <Countdown endsAt={raffle.endsAt} />}
                 {raffle.endsAt && !isActive && (
                   <span style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.3)' }}>
-                    terminó el {new Date(raffle.endsAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    ended {new Date(raffle.endsAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </span>
                 )}
               </div>
@@ -202,14 +292,14 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
             {/* Winner */}
             {raffle.winnerId && (
               <div style={{ background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.2)', borderRadius: 16, padding: '20px 22px' }}>
-                <div style={{ ...S, fontSize: 8, color: 'rgba(255,215,0,0.5)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 12 }}>🏆 ganador</div>
+                <div style={{ ...S, fontSize: 8, color: 'rgba(255,215,0,0.5)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 12 }}>🏆 winner</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   <div style={{ fontSize: 36 }}>🏆</div>
                   <div style={{ ...S, fontSize: 22, color: '#ffd700', letterSpacing: '0.04em' }}>{raffle.winnerId}</div>
                 </div>
                 {raffle.pickedAt && (
                   <div style={{ ...S, fontSize: 9, color: 'rgba(255,215,0,0.4)', marginTop: 8 }}>
-                    elegido el {new Date(raffle.pickedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                    picked {new Date(raffle.pickedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                   </div>
                 )}
               </div>
@@ -220,7 +310,7 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
               <div style={{ background: 'rgba(196,20,40,0.05)', border: '1px solid rgba(196,20,40,0.22)', borderRadius: 16, padding: '22px 20px' }}>
                 <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>participate</div>
                 <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.32)', marginBottom: 16, lineHeight: 1.6 }}>
-                  Introduce your Discord username bellow. Be sure to use the exact one
+                  Enter your Discord username below. Make sure it's exact so we can reach you if you win.
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input
@@ -260,8 +350,8 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
             {alreadyEntered && (
               <div style={{ background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 16, padding: '28px 20px', textAlign: 'center', animation: 'fadeInUp 0.4s ease both' }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>🎲</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 22, color: '#4ade80', marginBottom: 8 }}>¡ya estás participando!</div>
-                <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.08em' }}>suerte en el sorteo ✦</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 22, color: '#4ade80', marginBottom: 8 }}>you're already in!</div>
+                <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.08em' }}>good luck in the giveaway ✦</div>
               </div>
             )}
 
@@ -282,7 +372,7 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
                     }}>
                       <span>{e.discordUsername === raffle.winnerId ? '🏆 ' : ''}{e.discordUsername}</span>
                       <span style={{ fontSize: 9, color: 'rgba(254,240,244,0.2)' }}>
-                        {new Date(e.enteredAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                        {new Date(e.enteredAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
                       </span>
                     </div>
                   ))}
@@ -296,7 +386,7 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                   <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px #4ade80', animation: 'pulse-dot 2s ease-in-out infinite' }} />
                   <span style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    {raffle.entries.length} participando ahora
+                    {raffle.entries.length} joined so far
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
@@ -307,7 +397,7 @@ export default function RafflePage({ params }: { params: Promise<{ id: string }>
                   ))}
                   {raffle.entries.length > 12 && (
                     <span style={{ ...S, fontSize: 9, padding: '3px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', color: 'rgba(254,240,244,0.25)' }}>
-                      +{raffle.entries.length - 12} más
+                      +{raffle.entries.length - 12} more
                     </span>
                   )}
                 </div>

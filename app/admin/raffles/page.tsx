@@ -33,6 +33,182 @@ function Countdown({ endsAt }: { endsAt: string }) {
   )
 }
 
+// ─── Winner Reveal Overlay ───────────────────────────────────────────
+// Vertical slot-machine reel: the full participant list scrolls past behind a
+// center window, decelerates, and lands on the winner — then gold confetti.
+
+const REEL_ITEM_H = 46
+
+function WinnerReveal({
+  participants, winner, prizeLabel, onDone,
+}: {
+  participants: string[]
+  winner: string
+  prizeLabel?: string
+  onDone: () => void
+}) {
+  const [phase, setPhase] = useState<'spinning' | 'landed'>('spinning')
+  const [offset, setOffset] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [confetti, setConfetti] = useState<{ id: number; left: number; delay: number; duration: number; color: string; size: number; drift: number; rot: number }[]>([])
+
+  // Build the reel strip once: shuffled participants looped several times,
+  // ending exactly on the winner.
+  const [strip] = useState<string[]>(() => {
+    const pool = participants.length ? [...participants] : [winner]
+    const shuffled = [...pool].sort(() => Math.random() - 0.5)
+    const loops = Math.max(4, Math.ceil(36 / shuffled.length))
+    const out: string[] = []
+    for (let i = 0; i < loops; i++) out.push(...shuffled)
+    out.push(...shuffled.slice(0, Math.floor(Math.random() * shuffled.length)))
+    out.push(winner)
+    // A few trailing names so the winner isn't the last visible row
+    out.push(...shuffled.slice(0, 3))
+    return out
+  })
+
+  useEffect(() => {
+    const winnerIndex = strip.length - 4   // winner sits 4 from the end
+    const spinMs = 4200 + Math.random() * 800
+    // Start after a frame so the transition actually animates
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setDuration(spinMs)
+        setOffset(winnerIndex * REEL_ITEM_H)
+      })
+    })
+    const t = setTimeout(() => {
+      setPhase('landed')
+      const colors = ['#ffd700', '#ffec8b', '#e8195c', '#c41428', '#fff', '#ffb347']
+      setConfetti(Array.from({ length: 64 }, (_, id) => ({
+        id,
+        left: 6 + Math.random() * 88,
+        delay: Math.random() * 0.45,
+        duration: 1.6 + Math.random() * 1.6,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        size: 5 + Math.random() * 7,
+        drift: (Math.random() - 0.5) * 180,
+        rot: (Math.random() - 0.5) * 900,
+      })))
+    }, spinMs + 250)
+    return () => { cancelAnimationFrame(raf); clearTimeout(t) }
+  }, [strip])
+
+  const windowH = REEL_ITEM_H * 5
+  const landed = phase === 'landed'
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(5,0,7,0.93)', backdropFilter: 'blur(10px)', animation: 'wr-fade 0.3s ease',
+    }} onClick={() => { if (landed) onDone() }}>
+      {/* Confetti */}
+      {confetti.map(c => (
+        <span key={c.id} style={{
+          position: 'absolute', top: '30%', left: `${c.left}%`,
+          width: c.size, height: c.id % 2 ? c.size : c.size * 0.45,
+          borderRadius: c.id % 2 ? '50%' : 2, background: c.color,
+          animation: `wr-confetti ${c.duration}s cubic-bezier(0.2,0.6,0.4,1) ${c.delay}s forwards`,
+          opacity: 0, pointerEvents: 'none',
+          '--drift': `${c.drift}px`, '--rot': `${c.rot}deg`,
+        } as React.CSSProperties} />
+      ))}
+
+      <div style={{ textAlign: 'center', maxWidth: 440, width: '100%', padding: 16 }}>
+        <div style={{
+          ...S, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase',
+          color: landed ? 'rgba(255,215,0,0.75)' : 'rgba(254,240,244,0.4)', marginBottom: 20,
+          transition: 'color 0.4s',
+        }}>
+          {landed ? '🏆 we have a winner' : '🎲 rolling the reel…'}
+        </div>
+
+        {/* Reel window */}
+        <div style={{
+          position: 'relative', height: windowH, overflow: 'hidden', borderRadius: 18,
+          border: `1px solid ${landed ? 'rgba(255,215,0,0.55)' : 'rgba(196,20,40,0.4)'}`,
+          background: 'linear-gradient(180deg, #120016, #0a000f 50%, #120016)',
+          boxShadow: landed
+            ? '0 0 60px rgba(255,215,0,0.22), inset 0 0 40px rgba(255,215,0,0.04)'
+            : '0 0 36px rgba(196,20,40,0.18), inset 0 0 30px rgba(0,0,0,0.5)',
+          transition: 'border-color 0.5s, box-shadow 0.5s',
+          animation: landed ? 'wr-pop 0.55s cubic-bezier(0.34,1.56,0.64,1)' : 'none',
+        }}>
+          {/* Center selection window */}
+          <div style={{
+            position: 'absolute', left: 10, right: 10, top: '50%', height: REEL_ITEM_H,
+            transform: 'translateY(-50%)', borderRadius: 10, zIndex: 2, pointerEvents: 'none',
+            border: `1px solid ${landed ? 'rgba(255,215,0,0.6)' : 'rgba(196,20,40,0.45)'}`,
+            background: landed ? 'rgba(255,215,0,0.07)' : 'rgba(196,20,40,0.06)',
+            boxShadow: landed ? '0 0 26px rgba(255,215,0,0.25)' : '0 0 18px rgba(196,20,40,0.15)',
+            transition: 'all 0.5s',
+          }} />
+          {/* Side arrows */}
+          <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', zIndex: 3, fontSize: 11, color: landed ? '#ffd700' : 'var(--primary)', transition: 'color 0.4s' }}>▶</div>
+          <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', zIndex: 3, fontSize: 11, color: landed ? '#ffd700' : 'var(--primary)', transition: 'color 0.4s' }}>◀</div>
+
+          {/* Scrolling strip — starts centered on row 0, ends centered on winner */}
+          <div style={{
+            transform: `translateY(${windowH / 2 - REEL_ITEM_H / 2 - offset}px)`,
+            transition: duration ? `transform ${duration}ms cubic-bezier(0.12, 0.65, 0.18, 1)` : 'none',
+            willChange: 'transform',
+          }}>
+            {strip.map((name, i) => {
+              const isWinnerRow = landed && i === strip.length - 4
+              return (
+                <div key={i} style={{
+                  height: REEL_ITEM_H, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: isWinnerRow ? 20 : 14,
+                  color: isWinnerRow ? '#ffd700' : 'rgba(254,240,244,0.75)',
+                  letterSpacing: '0.05em',
+                  textShadow: isWinnerRow ? '0 0 22px rgba(255,215,0,0.65)' : 'none',
+                  transition: 'font-size 0.3s, color 0.3s',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '0 44px',
+                }}>
+                  {isWinnerRow ? `🏆 ${name}` : name}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Top/bottom fade masks */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: REEL_ITEM_H * 1.6, background: 'linear-gradient(rgba(10,0,15,0.96), transparent)', pointerEvents: 'none', zIndex: 1 }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: REEL_ITEM_H * 1.6, background: 'linear-gradient(transparent, rgba(10,0,15,0.96))', pointerEvents: 'none', zIndex: 1 }} />
+        </div>
+
+        {landed && prizeLabel && (
+          <div style={{ ...S, fontSize: 11, color: 'rgba(255,215,0,0.75)', marginTop: 16, animation: 'wr-rise 0.5s ease 0.25s both' }}>
+            🎁 {prizeLabel}
+          </div>
+        )}
+
+        {landed && (
+          <button onClick={onDone} style={{
+            ...S, marginTop: 22, padding: '10px 28px',
+            background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.4)',
+            borderRadius: 999, color: '#ffd700', fontSize: 10, letterSpacing: '0.14em',
+            textTransform: 'uppercase', cursor: 'pointer', animation: 'wr-rise 0.5s ease 0.45s both',
+          }}>
+            ✦ continue
+          </button>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes wr-fade { from{opacity:0} to{opacity:1} }
+        @keyframes wr-pop { 0%{transform:scale(1)} 40%{transform:scale(1.05)} 100%{transform:scale(1)} }
+        @keyframes wr-rise { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes wr-confetti {
+          0% { opacity:0; transform:translate(0,0) rotate(0deg) }
+          8% { opacity:1 }
+          100% { opacity:0; transform:translate(var(--drift), 55vh) rotate(var(--rot)) }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 // ─── Create/Edit Modal ───────────────────────────────────────────────────────
 
 function RaffleModal({
@@ -108,11 +284,11 @@ function RaffleModal({
 
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Título *</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Christmast Giveaway" style={fieldStyle} />
+            <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Title *</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Christmas Giveaway" style={fieldStyle} />
           </div>
           <div>
-            <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Descripción</label>
+            <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Description</label>
             <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3}
               placeholder="Giveaway Description…"
               style={{ ...fieldStyle, resize: 'vertical', lineHeight: 1.5 }} />
@@ -120,12 +296,12 @@ function RaffleModal({
 
           {/* Prizes */}
           <div>
-            <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Premios</label>
+            <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Prizes</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 8 }}>
               <div style={{ display: 'flex', gap: 6 }}>
                 <input value={prizeInput} onChange={e => setPrizeInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPrize() } }}
-                  placeholder="Reward Name…"
+                  placeholder="Reward name…"
                   style={{ ...fieldStyle, flex: 1 }} />
                 <button type="button" onClick={addPrize}
                   style={{ ...S, padding: '0 12px', background: 'rgba(196,20,40,0.1)', border: '1px solid rgba(196,20,40,0.25)', borderRadius: 8, color: 'rgba(254,240,244,0.6)', fontSize: 10, cursor: 'pointer' }}>
@@ -133,7 +309,7 @@ function RaffleModal({
                 </button>
               </div>
               <input value={prizeDesc} onChange={e => setPrizeDesc(e.target.value)}
-                placeholder="Reward Description (opcional)…"
+                placeholder="Reward description (optional)…"
                 style={{ ...fieldStyle, fontSize: 10 }} />
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
@@ -154,15 +330,15 @@ function RaffleModal({
 
           {/* Max winners */}
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(196,20,40,0.1)', borderRadius: 10, padding: '12px 14px' }}>
-            <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>🏆 Winners Number</label>
-            <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginBottom: 8 }}>¿How many winners?</div>
+            <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>🏆 Number of winners</label>
+            <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginBottom: 8 }}>How many winners will be picked?</div>
             <input type="number" min="1" max="99" value={maxWinners} onChange={e => setMaxWinners(e.target.value)}
               style={{ ...fieldStyle, fontFamily: 'monospace', width: 80 }} />
           </div>
 
           {/* End date */}
           <div>
-            <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Fecha de fin (opcional)</label>
+            <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>End date (optional)</label>
             <input type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)}
               style={{ ...fieldStyle, colorScheme: 'dark' }} />
           </div>
@@ -171,7 +347,7 @@ function RaffleModal({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(196,20,40,0.12)', borderRadius: 10, padding: '12px 14px' }}>
             <div>
               <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>Auto-complete</div>
-              <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginTop: 2 }}>Choose automaticly the winner once the date</div>
+              <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginTop: 2 }}>Automatically pick the winner when the end date passes</div>
             </div>
             <button type="button" onClick={() => setAutoEnd(v => !v)}
               style={{ width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', background: autoEnd ? 'rgba(196,20,40,0.7)' : 'rgba(255,255,255,0.1)', position: 'relative', transition: 'background 0.2s', flexShrink: 0, marginLeft: 12 }}>
@@ -190,7 +366,7 @@ function RaffleModal({
               fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
               cursor: saving ? 'not-allowed' : 'pointer',
             }}>
-            {saving ? 'saving…' : initial ? 'gave changes' : 'create giveaway'}
+            {saving ? 'saving…' : initial ? 'save changes' : 'create giveaway'}
           </button>
         </form>
       </div>
@@ -216,6 +392,7 @@ function ParticipantsDrawer({
   const [selectedPrize, setSelectedPrize] = useState<string>('')
   const [tab, setTab]             = useState<'participants' | 'winners'>('participants')
   const [search, setSearch]       = useState('')
+  const [reveal, setReveal]       = useState<{ winner: string; prizeLabel?: string; raffle: Raffle } | null>(null)
 
   const showToast = (msg: string, ok = true) => {
     setToastOk(ok); setToast(msg); setTimeout(() => setToast(''), 3500)
@@ -226,15 +403,15 @@ function ParticipantsDrawer({
   const canPickMore = raffle.status === 'active' && winners.length < maxWinners
 
   const pick = async () => {
-    if (!confirm(`¿Choose Winner${maxWinners > 1 ? ` (${winners.length + 1}/${maxWinners})` : ''} of "${raffle.title}"?`)) return
+    if (!confirm(`Pick winner${maxWinners > 1 ? ` (${winners.length + 1}/${maxWinners})` : ''} for "${raffle.title}"?`)) return
     setPicking(true)
     const body: Record<string, string> = {}
     if (selectedPrize) body.prizeId = selectedPrize
     const res = await fetch(`/api/admin/raffles/${raffle.id}/pick`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     const data = await res.json()
     if (res.ok) {
-      showToast(`🏆 Winner: ${data.winner.discordUsername}${data.winner.prizeLabel ? ` — ${data.winner.prizeLabel}` : ''}`)
-      onUpdated(data.raffle)
+      // Play the slot-machine reveal; raffle state is applied when it closes
+      setReveal({ winner: data.winner.discordUsername, prizeLabel: data.winner.prizeLabel ?? undefined, raffle: data.raffle })
       setSelectedPrize('')
     } else {
       showToast(`⚠ ${data.error}`, false)
@@ -252,7 +429,7 @@ function ParticipantsDrawer({
     })
     const data = await res.json()
     if (res.ok) {
-      showToast(`✓ ${addInput.trim()} Added`)
+      showToast(`✓ ${addInput.trim()} added`)
       onUpdated({ ...raffle, entries: [...raffle.entries, { discordUsername: addInput.trim(), enteredAt: new Date().toISOString() }] })
       setAddInput('')
     } else {
@@ -262,7 +439,7 @@ function ParticipantsDrawer({
   }
 
   const removeParticipant = async (username: string) => {
-    if (!confirm(`¿Remove ${username} From Giveaway?`)) return
+    if (!confirm(`Remove ${username} from this giveaway?`)) return
     setRemoving(username)
     const res = await fetch(`/api/admin/raffles/${raffle.id}/participants`, {
       method: 'DELETE',
@@ -280,12 +457,12 @@ function ParticipantsDrawer({
   }
 
   const exportCSV = () => {
-    const header = 'Discord,Fecha de entrada\n'
+    const header = 'Discord,Entered at\n'
     const rows = raffle.entries.map(e => `${e.discordUsername},${new Date(e.enteredAt).toLocaleString('es-ES')}`).join('\n')
     const blob = new Blob([header + rows], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url; a.download = `${raffle.title.replace(/\s+/g, '_')}_participantes.csv`
+    a.href = url; a.download = `${raffle.title.replace(/\s+/g, '_')}_participants.csv`
     a.click(); URL.revokeObjectURL(url)
   }
 
@@ -371,7 +548,7 @@ function ParticipantsDrawer({
                     cursor: picking || raffle.entries.length === 0 || !canPickMore ? 'not-allowed' : 'pointer',
                     opacity: raffle.entries.length === 0 || !canPickMore ? 0.4 : 1,
                   }}>
-                  {picking ? 'cHOOSING…' : !canPickMore ? `✓ all the winners had been chosed (${winners.length}/${maxWinners})` : `🎲 choose winner ${maxWinners > 1 ? `(${winners.length + 1}/${maxWinners})` : ''}`}
+                  {picking ? 'choosing…' : !canPickMore ? `✓ all winners picked (${winners.length}/${maxWinners})` : `🎲 pick winner ${maxWinners > 1 ? `(${winners.length + 1}/${maxWinners})` : ''}`}
                 </button>
               </div>
             )}
@@ -380,7 +557,7 @@ function ParticipantsDrawer({
             <div style={{ display: 'flex', gap: 6 }}>
               <input value={addInput} onChange={e => setAddInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addParticipant() }}
-                placeholder="Add Discord Username…"
+                placeholder="Add Discord username…"
                 style={fieldStyle} />
               <button onClick={addParticipant} disabled={adding || !addInput.trim()}
                 style={{ ...S, padding: '0 12px', background: 'rgba(196,20,40,0.1)', border: '1px solid rgba(196,20,40,0.25)', borderRadius: 7, color: 'rgba(254,240,244,0.6)', fontSize: 10, cursor: 'pointer', flexShrink: 0 }}>
@@ -391,7 +568,7 @@ function ParticipantsDrawer({
             {/* Search + export */}
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search Participant…"
+                placeholder="Search participant…"
                 style={{ ...fieldStyle, flex: 1 }} />
               <button onClick={exportCSV}
                 style={{ ...S, padding: '7px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 7, color: 'rgba(254,240,244,0.4)', fontSize: 9, cursor: 'pointer', flexShrink: 0 }}
@@ -407,7 +584,7 @@ function ParticipantsDrawer({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {filteredEntries.length === 0 ? (
                 <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.2)', textAlign: 'center', padding: '20px 0' }}>
-                  {search ? 'No Results' : 'Still No Participants'}
+                  {search ? 'No results' : 'No participants yet'}
                 </div>
               ) : filteredEntries.map((entry, i) => {
                 const isWinner = winnerUsernames.has(entry.discordUsername.toLowerCase())
@@ -445,11 +622,24 @@ function ParticipantsDrawer({
           </>
         )}
 
+        {reveal && (
+          <WinnerReveal
+            participants={raffle.entries.map(e => e.discordUsername)}
+            winner={reveal.winner}
+            prizeLabel={reveal.prizeLabel}
+            onDone={() => {
+              onUpdated(reveal.raffle)
+              showToast(`🏆 Winner: ${reveal.winner}${reveal.prizeLabel ? ` — ${reveal.prizeLabel}` : ''}`)
+              setReveal(null)
+            }}
+          />
+        )}
+
         {tab === 'winners' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {winners.length === 0 ? (
               <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.2)', textAlign: 'center', padding: '32px 0' }}>
-                Still no winners tho
+                No winners yet
               </div>
             ) : winners.map((w, i) => (
               <div key={i} style={{
@@ -459,7 +649,7 @@ function ParticipantsDrawer({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <div style={{ ...S, fontSize: 8, color: 'rgba(255,215,0,0.5)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
-                      🏆 Ganador #{i + 1}
+                      🏆 Winner #{i + 1}
                     </div>
                     <div style={{ ...S, fontSize: 14, color: '#ffd700', marginBottom: w.prizeLabel ? 4 : 0 }}>{w.discordUsername}</div>
                     {w.prizeLabel && (
@@ -475,7 +665,7 @@ function ParticipantsDrawer({
 
             {canPickMore && (
               <div style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.3)', textAlign: 'center', padding: '8px 0' }}>
-                There's {maxWinners - winners.length} winners{maxWinners - winners.length !== 1 ? 's' : ''} Ramaining for choose
+                {maxWinners - winners.length} winner{maxWinners - winners.length !== 1 ? 's' : ''} left to pick
               </div>
             )}
           </div>
@@ -531,7 +721,7 @@ export default function RafflesPage() {
   }, [router])
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este sorteo?')) return
+    if (!confirm('Delete this giveaway?')) return
     setDeleting(id)
     await fetch(`/api/admin/raffles/${id}`, { method: 'DELETE' })
     setRaffles(prev => prev.filter(r => r.id !== id))
@@ -593,7 +783,7 @@ export default function RafflesPage() {
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(196,20,40,0.28)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(196,20,40,0.18)')}
           >
-            + nuevo sorteo
+            + new giveaway
           </button>
         </div>
 
@@ -601,8 +791,8 @@ export default function RafflesPage() {
           <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(254,240,244,0.3)', textAlign: 'center', paddingTop: 60, letterSpacing: '0.1em' }}>loading…</div>
         ) : raffles.length === 0 ? (
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(196,20,40,0.2)', borderRadius: 12, padding: '48px 24px', textAlign: 'center' }}>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(254,240,244,0.25)', letterSpacing: '0.08em' }}>there's no giveaways</div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.15)', marginTop: 6 }}>create your frist giveaway</div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(254,240,244,0.25)', letterSpacing: '0.08em' }}>no giveaways yet</div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.15)', marginTop: 6 }}>create your first giveaway</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -659,7 +849,7 @@ export default function RafflesPage() {
                     )}
                     <button onClick={() => handleDuplicate(r.id)} disabled={duplicating === r.id}
                       style={{ ...S, padding: '5px 10px', fontSize: 9, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, color: 'rgba(254,240,244,0.4)', cursor: 'pointer' }}
-                      title="Duplicar sorteo">
+                      title="Duplicate giveaway">
                       {duplicating === r.id ? '…' : '⎘'}
                     </button>
                     <button onClick={() => handleDelete(r.id)} disabled={deleting === r.id}

@@ -11,6 +11,7 @@ const NAV = [
   { href: '/admin/sessions', label: 'Sessions', icon: '⊞' },
   { href: '/admin/codes', label: 'Codes', icon: '⊛' },
   { href: '/admin/raffles', label: 'Giveaways', icon: '🎲' },
+  { href: '/admin/settings', label: 'Settings', icon: '⚙' },
 ]
 
 interface LiveData { activeLastHour: number; todayTotal: number }

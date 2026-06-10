@@ -238,7 +238,7 @@ export default function Home() {
                 )}
               </div>
               <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 13, color: 'var(--text-muted)' }}>
-                {raffleCount > 0 ? 'participate and win prices ♡' : 'starting soon :3'}
+                {raffleCount > 0 ? 'participate and win prizes ♡' : 'starting soon :3'}
               </div>
             </div>
             <div style={{ color: raffleHovered ? 'rgba(196,20,40,0.9)' : 'rgba(245,232,255,0.2)', transition: 'all 0.25s ease', transform: raffleHovered ? 'translateX(2px)' : 'none', fontSize: 14 }}>→</div>

@@ -185,7 +185,7 @@ export default function TrafficPage() {
       </div>
 
       {/* Funnel */}
-      <Sec title="pages más visitadas — funnel">
+      <Sec title="most visited pages — funnel">
         <Funnel pages={stats.byPage} />
       </Sec>
 

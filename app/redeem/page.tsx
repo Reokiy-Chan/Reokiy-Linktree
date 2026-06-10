@@ -100,9 +100,15 @@ function ScratchCard({
 }) {
   const canvasRef  = useRef<HTMLCanvasElement>(null)
   const [revealed, setRevealed] = useState(false)
+  const [revealing, setRevealing] = useState(false)   // threshold hit → overlay dissolves
   const [percent,  setPercent]  = useState(0)
   const isDrawing  = useRef(false)
   const [copied,   setCopied]   = useState(false)
+  const [dust, setDust] = useState<{ id: number; x: number; y: number; dx: number; dy: number; size: number; color: string }[]>([])
+  const dustId = useRef(0)
+  const checkCounter = useRef(0)
+  const [confetti, setConfetti] = useState<{ id: number; left: number; delay: number; duration: number; color: string; size: number; drift: number; rot: number }[]>([])
+  const tiltRef = useRef<HTMLDivElement>(null)
 
   const brushRadius = difficultyToRadius(difficulty, height)
 
@@ -117,10 +123,10 @@ function ScratchCard({
   })()
 
   const difficultyHint: Record<ScratchDifficulty, string> = {
-    easy: '🪙 fácil de rascar',
+    easy: '🪙 easy to scratch',
     normal: '🪙 scratch to reveal',
-    hard: '🪙 difícil de rascar…',
-    very_hard: '🪙 muy difícil — ¡no te rindas!',
+    hard: '🪙 hard to scratch…',
+    very_hard: '🪙 very hard — don\'t give up!',
   }
 
   const initCanvas = useCallback(() => {
@@ -174,7 +180,7 @@ function ScratchCard({
     // Sub-label
     ctx.font = `${Math.min(10, Math.floor(h / 14))}px Space Mono, monospace`
     ctx.fillStyle = textColor ? `${textColor}77` : 'rgba(255,255,255,0.28)'
-    ctx.fillText('tu premio está debajo', w / 2, h / 2 + 14)
+    ctx.fillText('your prize is underneath', w / 2, h / 2 + 14)
 
     // Difficulty hint
     const hint = difficultyHint[difficulty]
@@ -196,13 +202,49 @@ function ScratchCard({
 
   useEffect(() => { initCanvas() }, [initCanvas])
 
+  // Trigger the dissolve animation, then fully remove the overlay + confetti
+  const triggerReveal = useCallback(() => {
+    setRevealing(true)
+    const colors = [accentColor, '#ffd700', '#fff', lighten(accentColor, 60), '#ffec8b']
+    setConfetti(Array.from({ length: 34 }, (_, id) => ({
+      id,
+      left: 10 + Math.random() * 80,
+      delay: 0.15 + Math.random() * 0.35,
+      duration: 1.1 + Math.random() * 1.0,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 4 + Math.random() * 6,
+      drift: (Math.random() - 0.5) * 120,
+      rot: (Math.random() - 0.5) * 720,
+    })))
+    setTimeout(() => setRevealed(true), 650)
+  }, [accentColor])
+
   const scratch = useCallback((x: number, y: number) => {
+    if (revealing) return
     const canvas = canvasRef.current; if (!canvas) return
     const ctx = canvas.getContext('2d'); if (!ctx) return
     ctx.globalCompositeOperation = 'destination-out'
     ctx.beginPath()
     ctx.arc(x, y, brushRadius, 0, Math.PI * 2)
     ctx.fill()
+
+    // Gold dust particles flying off the scratch point (screen-space coords)
+    const rect = canvas.getBoundingClientRect()
+    const sx = (x / canvas.width) * rect.width
+    const sy = (y / canvas.height) * rect.height
+    const burst = Array.from({ length: 3 }, () => ({
+      id: dustId.current++,
+      x: sx, y: sy,
+      dx: (Math.random() - 0.5) * 50,
+      dy: 18 + Math.random() * 42,
+      size: 2 + Math.random() * 3.5,
+      color: Math.random() > 0.4 ? '#ffd700' : lighten(overlayColor, 70),
+    }))
+    setDust(prev => [...prev.slice(-26), ...burst])
+
+    // Pixel counting via getImageData is expensive — only check every 5th stroke
+    checkCounter.current++
+    if (checkCounter.current % 5 !== 0) return
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
     let transparent = 0
     for (let i = 3; i < imageData.data.length; i += 4) {
@@ -210,8 +252,8 @@ function ScratchCard({
     }
     const pct = (transparent / (canvas.width * canvas.height)) * 100
     setPercent(pct)
-    if (pct > revealThreshold) setRevealed(true)
-  }, [brushRadius, revealThreshold])
+    if (pct > revealThreshold) triggerReveal()
+  }, [brushRadius, revealThreshold, revealing, overlayColor, triggerReveal])
 
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current; if (!canvas) return { x: 0, y: 0 }
@@ -229,8 +271,49 @@ function ScratchCard({
     try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch {}
   }
 
+  // Subtle 3D tilt that follows the pointer (only before reveal starts)
+  const handleTilt = (e: React.MouseEvent) => {
+    const el = tiltRef.current
+    if (!el || revealed || isDrawing.current) return
+    const rect = el.getBoundingClientRect()
+    const px = (e.clientX - rect.left) / rect.width - 0.5
+    const py = (e.clientY - rect.top) / rect.height - 0.5
+    el.style.transform = `perspective(700px) rotateY(${px * 7}deg) rotateX(${-py * 7}deg)`
+  }
+  const resetTilt = () => {
+    if (tiltRef.current) tiltRef.current.style.transform = 'perspective(700px) rotateY(0deg) rotateX(0deg)'
+  }
+
   return (
-    <div style={{ position: 'relative', userSelect: 'none', width: '100%', maxWidth: width }}>
+    <div
+      ref={tiltRef}
+      onMouseMove={handleTilt}
+      onMouseLeave={resetTilt}
+      style={{ position: 'relative', userSelect: 'none', width: '100%', maxWidth: width, transition: 'transform 0.18s ease-out', willChange: 'transform' }}
+    >
+      {/* Confetti burst on reveal */}
+      {confetti.map(c => (
+        <span key={c.id} style={{
+          position: 'absolute', top: '40%', left: `${c.left}%`, zIndex: 5,
+          width: c.size, height: c.id % 2 ? c.size : c.size * 0.5,
+          borderRadius: c.id % 2 ? '50%' : 2, background: c.color,
+          animation: `sc-confetti ${c.duration}s cubic-bezier(0.2,0.6,0.4,1) ${c.delay}s forwards`,
+          opacity: 0, pointerEvents: 'none',
+          '--drift': `${c.drift}px`, '--rot': `${c.rot}deg`,
+        } as React.CSSProperties} />
+      ))}
+
+      {/* Gold dust while scratching */}
+      {dust.map(p => (
+        <span key={p.id} style={{
+          position: 'absolute', left: p.x, top: p.y, zIndex: 4,
+          width: p.size, height: p.size, borderRadius: '50%', background: p.color,
+          animation: 'sc-dust 0.7s ease-out forwards',
+          pointerEvents: 'none',
+          '--ddx': `${p.dx}px`, '--ddy': `${p.dy}px`,
+        } as React.CSSProperties} />
+      ))}
+
       {/* Revealed reward area */}
       <div style={{
         borderRadius: 14,
@@ -247,8 +330,18 @@ function ScratchCard({
         justifyContent: 'center',
         gap: 12,
         boxSizing: 'border-box',
+        boxShadow: revealed ? `0 0 34px ${accentColor}33` : 'none',
+        transition: 'box-shadow 0.8s ease',
       }}>
         <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 0%, ${accentColor}18 0%, transparent 65%)`, pointerEvents: 'none' }} />
+        {/* Shine sweep after reveal */}
+        {revealed && (
+          <div style={{
+            position: 'absolute', top: 0, bottom: 0, width: '38%', pointerEvents: 'none',
+            background: 'linear-gradient(105deg, transparent, rgba(255,255,255,0.13), transparent)',
+            animation: 'sc-shine 1.4s ease-out 0.2s both',
+          }} />
+        )}
         <div style={{ position: 'absolute', top: 10, right: 14, fontSize: 16, opacity: 0.1 }}>✦</div>
         <div style={{ position: 'absolute', bottom: 10, left: 14, fontSize: 16, opacity: 0.1 }}>✦</div>
 
@@ -257,6 +350,7 @@ function ScratchCard({
           letterSpacing: '0.22em', color: '#fff', padding: '8px 0',
           textShadow: `0 0 20px ${accentColor}88, 0 0 40px ${accentColor}44`,
           wordBreak: 'break-all',
+          animation: revealed ? 'sc-code-in 0.6s cubic-bezier(0.34,1.56,0.64,1) both' : 'none',
         }}>
           {code}
         </div>
@@ -268,7 +362,7 @@ function ScratchCard({
           color: copied ? accentColor : 'rgba(255,255,255,0.5)',
           transition: 'all 0.2s',
         }}>
-          {copied ? '✓ copiado!' : 'copiar código'}
+          {copied ? '✓ copied!' : 'copy code'}
         </button>
       </div>
 
@@ -281,6 +375,11 @@ function ScratchCard({
           style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
             borderRadius: 14, cursor: 'crosshair', touchAction: 'none',
+            opacity: revealing ? 0 : 1,
+            filter: revealing ? 'blur(6px)' : 'none',
+            transform: revealing ? 'scale(1.04)' : 'scale(1)',
+            transition: 'opacity 0.6s ease, filter 0.6s ease, transform 0.6s ease',
+            pointerEvents: revealing ? 'none' : 'auto',
           }}
           onMouseDown={e => { isDrawing.current = true; scratch(getPos(e).x, getPos(e).y) }}
           onMouseMove={e => { if (isDrawing.current) scratch(getPos(e).x, getPos(e).y) }}
@@ -293,7 +392,7 @@ function ScratchCard({
       )}
 
       {/* Progress bar */}
-      {!revealed && percent > 5 && (
+      {!revealed && !revealing && percent > 5 && (
         <div style={{ marginTop: 8 }}>
           <div style={{ height: 2, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
             <div style={{
@@ -305,11 +404,18 @@ function ScratchCard({
           </div>
           {percent < revealThreshold && (
             <div style={{ ...S, fontSize: 8, color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: 5, letterSpacing: '0.1em' }}>
-              {Math.round((percent / revealThreshold) * 100)}% — sigue raspando…
+              {Math.round((percent / revealThreshold) * 100)}% — keep scratching…
             </div>
           )}
         </div>
       )}
+
+      <style>{`
+        @keyframes sc-dust { 0%{opacity:1;transform:translate(0,0) scale(1)} 100%{opacity:0;transform:translate(var(--ddx),var(--ddy)) scale(0.3)} }
+        @keyframes sc-confetti { 0%{opacity:0;transform:translate(0,0) rotate(0)} 10%{opacity:1} 100%{opacity:0;transform:translate(var(--drift),-120px) rotate(var(--rot))} }
+        @keyframes sc-shine { 0%{left:-45%} 100%{left:110%} }
+        @keyframes sc-code-in { 0%{opacity:0;transform:scale(0.7);letter-spacing:0.05em} 100%{opacity:1;transform:scale(1);letter-spacing:0.22em} }
+      `}</style>
     </div>
   )
 }
@@ -638,6 +744,8 @@ export default function RedeemPage() {
     setTimeout(() => setShowReward(true), 320)
   }
 
+  const [shake, setShake] = useState(0)
+
   const submit = async () => {
     if (!code.trim()) return
     setLoading(true); setError('')
@@ -645,8 +753,9 @@ export default function RedeemPage() {
       const res = await fetch('/api/redeem', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ code: code.trim() }) })
       const data = await res.json()
       if (!res.ok) {
-        const msgs: Record<number, string> = { 404:'Invalid code. Check for typos.', 410:'This code has already been used.' }
+        const msgs: Record<number, string> = { 404:'Invalid code. Check for typos.', 410:'This code has already been used.', 429:'Slow down — too many attempts.', 503:'Redeem is temporarily disabled.' }
         setError(msgs[res.status] ?? (data.error ?? 'Something went wrong.'))
+        setShake(n => n + 1)
       } else {
         setReward(data); setGiftOpened(false); setShowReward(false)
       }
@@ -667,8 +776,8 @@ export default function RedeemPage() {
       <ReokiyBackground />
       <main style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'transparent', padding:'24px 16px', position:'relative', zIndex:1 }}>
         <div style={{ width:'100%', maxWidth:420 }}>
-          <div style={{ textAlign:'center', marginBottom:36 }}>
-            <div style={{ fontFamily:'var(--font-display)', fontStyle:'italic', fontSize:32, color:'var(--text)', lineHeight:1 }}>redeem</div>
+          <div style={{ textAlign:'center', marginBottom:36, animation:'rdTitle 0.7s ease both' }}>
+            <div style={{ fontFamily:'var(--font-display)', fontStyle:'italic', fontSize:32, color:'var(--text)', lineHeight:1, textShadow:'0 0 30px rgba(196,20,40,0.35)' }}>redeem</div>
             <div style={{ ...S, fontSize:10, color:'rgba(254,240,244,0.3)', letterSpacing:'0.14em', textTransform:'uppercase', marginTop:8 }}>enter your code below</div>
           </div>
 
@@ -685,11 +794,11 @@ export default function RedeemPage() {
               )}
             </>
           ) : (
-            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <div key={shake} style={{ display:'flex', flexDirection:'column', gap:12, animation: shake > 0 ? 'rdShake 0.4s ease' : 'rdRise 0.6s ease 0.15s both' }}>
               <input value={code} onChange={e=>{ setCode(e.target.value.toUpperCase()); setError('') }} onKeyDown={e=>{ if(e.key==='Enter') submit() }} placeholder="XXXXXXXX" maxLength={32} autoFocus autoComplete="off" spellCheck={false} style={fieldStyle}
-                onFocus={e=>(e.currentTarget.style.borderColor='rgba(196,20,40,0.55)')}
-                onBlur={e=>(e.currentTarget.style.borderColor='rgba(196,20,40,0.25)')} />
-              {error && <div style={{ ...S, fontSize:10, color:'var(--primary)', textAlign:'center', letterSpacing:'0.06em' }}>{error}</div>}
+                onFocus={e=>{ e.currentTarget.style.borderColor='rgba(196,20,40,0.55)'; e.currentTarget.style.boxShadow='0 0 22px rgba(196,20,40,0.18)' }}
+                onBlur={e=>{ e.currentTarget.style.borderColor='rgba(196,20,40,0.25)'; e.currentTarget.style.boxShadow='none' }} />
+              {error && <div style={{ ...S, fontSize:10, color:'var(--primary)', textAlign:'center', letterSpacing:'0.06em', animation:'rdRise 0.25s ease' }}>{error}</div>}
               <button type="button" onClick={submit} disabled={loading || !code.trim()}
                 style={{ ...S, padding:'12px 0', background:loading||!code.trim()?'rgba(196,20,40,0.06)':'rgba(196,20,40,0.18)', border:'1px solid rgba(196,20,40,0.4)', borderRadius:10, color:loading||!code.trim()?'var(--text-muted)':'var(--text)', fontSize:12, letterSpacing:'0.12em', textTransform:'uppercase', cursor:loading||!code.trim()?'not-allowed':'pointer', transition:'all 0.15s' }}
                 onMouseEnter={e=>{ if(!loading&&code.trim()) e.currentTarget.style.background='rgba(196,20,40,0.28)' }}
@@ -699,7 +808,12 @@ export default function RedeemPage() {
             </div>
           )}
         </div>
-        <style>{`@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }`}</style>
+        <style>{`
+          @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+          @keyframes rdTitle { from{opacity:0;transform:translateY(-10px);filter:blur(4px)} to{opacity:1;transform:translateY(0);filter:blur(0)} }
+          @keyframes rdRise { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+          @keyframes rdShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(3px)} }
+        `}</style>
       </main>
     </>
   )

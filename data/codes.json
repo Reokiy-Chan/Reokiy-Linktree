@@ -19,5 +19,27 @@
     "used": false,
     "useCount": 1,
     "createdAt": "2026-04-28T21:26:14.005Z"
+  },
+  {
+    "code": "TEST22",
+    "label": "TEST22",
+    "rewardType": "text",
+    "rewardContent": "test",
+    "rewardTitle": "test",
+    "giftAnimation": true,
+    "giftBoxColor": "#c41428",
+    "giftRibbonColor": "#fef0f4",
+    "giftPattern": "dots",
+    "giftPatternColor": "#ffffff",
+    "scratchCard": true,
+    "scratchCardColor": "#2a1a2e",
+    "scratchAccentColor": "#c41428",
+    "scratchDifficulty": "normal",
+    "maxUses": 1,
+    "id": "2ed1d757-ae75-4d14-a4c1-bebeaf281954",
+    "used": true,
+    "useCount": 1,
+    "createdAt": "2026-06-10T21:59:11.195Z",
+    "usedAt": "2026-06-10T21:59:30.804Z"
   }
 ]

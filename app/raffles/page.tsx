@@ -248,7 +248,7 @@ export default function RafflesPage() {
         {/* Content */}
         {loading ? (
           <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.25)', textAlign: 'center', padding: '60px 0', letterSpacing: '0.1em' }}>
-            cargando…
+            loading…
           </div>
         ) : displayed.length === 0 ? (
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(196,20,40,0.15)', borderRadius: 16, padding: '60px 24px', textAlign: 'center' }}>

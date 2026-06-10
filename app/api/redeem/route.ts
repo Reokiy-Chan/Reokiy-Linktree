@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCodeByString, markUsed } from '@/app/lib/codes'
+import { readSettings, attackRateLimit, getClientIp } from '@/app/lib/settings'
 
 export async function POST(req: NextRequest) {
+  const settings = await readSettings()
+  if (!settings.redeemEnabled) {
+    return NextResponse.json({ error: 'Redeem is temporarily disabled' }, { status: 503 })
+  }
+  if (settings.attackMode && !attackRateLimit(getClientIp(req.headers))) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const { code } = await req.json().catch(() => ({}))
   if (!code || typeof code !== 'string') {
     return NextResponse.json({ error: 'No code provided' }, { status: 400 })

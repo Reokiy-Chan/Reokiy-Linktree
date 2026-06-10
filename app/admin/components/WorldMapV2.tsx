@@ -18,11 +18,28 @@ interface Arc {
   color: string; label: string; page: string
 }
 
+interface PresenceSession {
+  sessionId: string; page: string; city: string; country: string
+  lat?: number; lon?: number; connectedAt: number; lastSeen: number
+}
+interface LiveEvent {
+  type: 'connect' | 'disconnect'
+  sessionId: string; city: string; country: string; page: string
+  lat?: number; lon?: number; ts: number
+}
+interface Ring {
+  lat: number; lon: number
+  color: string; born: number; label: string
+  kind: 'connect' | 'disconnect'
+}
+
 interface Props {
   height?: number
   showControls?: boolean
   maxArcs?: number
   liveVisits?: LiveVisit[]
+  online?: PresenceSession[]
+  liveEvents?: LiveEvent[]
 }
 
 let geoCache: { d3geo: typeof import('d3-geo'); topo: typeof import('topojson-client'); world: any } | null = null
@@ -49,7 +66,7 @@ function MapBtn({ onClick, title, active, children }: {
   )
 }
 
-export default function WorldMapV2({ height = 280, showControls = false, maxArcs = 60, liveVisits }: Props) {
+export default function WorldMapV2({ height = 280, showControls = false, maxArcs = 60, liveVisits, online, liveEvents }: Props) {
   const canvasRef   = useRef<HTMLCanvasElement>(null)
   const heatRef     = useRef<HTMLCanvasElement>(null)
   const arcsRef     = useRef<Arc[]>([])
@@ -57,6 +74,9 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
   const rafRef      = useRef(0)
   const pulseRef    = useRef(0)
   const visitHistoryRef = useRef<LiveVisit[]>([])
+  const ringsRef    = useRef<Ring[]>([])
+  const onlineRef   = useRef<PresenceSession[]>([])
+  const seenEventsRef = useRef(new Set<string>())
 
   const [geoReady, setGeoReady] = useState(false)
   const [layers, setLayers]     = useState({ arcs: true, heat: true, markers: true })
@@ -106,7 +126,9 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
   }, [getProjection])
 
   // ── Spawn arc ─────────────────────────────────────────────
-  const spawnArc = useCallback((v: LiveVisit, w: number, h: number) => {
+  // `record` is false for replayed arcs so the history and heatmap
+  // don't fill up with duplicates of the same visit.
+  const spawnArc = useCallback((v: LiveVisit, w: number, h: number, record = true) => {
     const p1 = project(v.lat, v.lon, w, h)
     const p2 = project(SERVER_LAT, SERVER_LON, w, h)
     if (!p1 || !p2) return
@@ -122,10 +144,12 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
       page: v.page,
     })
     if (arcsRef.current.length > maxArcs) arcsRef.current.shift()
-    heatPtsRef.current.push([x1, y1])
-    if (heatPtsRef.current.length > 300) heatPtsRef.current.shift()
-    visitHistoryRef.current.push(v)
-    if (visitHistoryRef.current.length > 200) visitHistoryRef.current.shift()
+    if (record) {
+      heatPtsRef.current.push([x1, y1])
+      if (heatPtsRef.current.length > 300) heatPtsRef.current.shift()
+      visitHistoryRef.current.push(v)
+      if (visitHistoryRef.current.length > 200) visitHistoryRef.current.shift()
+    }
   }, [project, maxArcs])
 
   // ── Flush buffered visits once geo is ready ───────────────
@@ -324,6 +348,52 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
       }
     }
 
+    // ── Online session markers — steady green dots while connected ──────────
+    const now2 = Date.now()
+    for (const s of onlineRef.current) {
+      if (s.lat == null || s.lon == null) continue
+      const p = project(s.lat, s.lon, w, h)
+      if (!p) continue
+      const [ox, oy] = p
+      const breath = Math.sin(pulseRef.current * 0.7 + s.connectedAt % 10) * 0.5 + 0.5
+      ctx.beginPath(); ctx.arc(ox, oy, (4 + breath * 5) / zoom, 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(74,222,128,${0.08 + breath * 0.1})`; ctx.fill()
+      ctx.beginPath(); ctx.arc(ox, oy, 2.6 / zoom, 0, Math.PI * 2)
+      ctx.fillStyle = '#4ade80'; ctx.shadowColor = '#4ade80'; ctx.shadowBlur = 8 / zoom
+      ctx.fill(); ctx.shadowBlur = 0
+    }
+
+    // ── Connect / disconnect rings — expanding pulses that fade out ─────────
+    ringsRef.current = ringsRef.current.filter(r => now2 - r.born < 3200)
+    for (const ring of ringsRef.current) {
+      const p = project(ring.lat, ring.lon, w, h)
+      if (!p) continue
+      const [rx, ry] = p
+      const age = (now2 - ring.born) / 3200          // 0 → 1
+      const alpha = (1 - age) * 0.9
+      // Two staggered expanding circles
+      for (const offset of [0, 0.35]) {
+        const t = age - offset
+        if (t < 0) continue
+        const radius = (4 + t * 34) / zoom
+        ctx.beginPath(); ctx.arc(rx, ry, radius, 0, Math.PI * 2)
+        ctx.strokeStyle = ring.color + Math.round(Math.max(0, alpha * (1 - t)) * 255).toString(16).padStart(2, '0')
+        ctx.lineWidth = 1.6 / zoom
+        if (ring.kind === 'disconnect') ctx.setLineDash([4 / zoom, 3 / zoom])
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+      // Center dot + label
+      ctx.beginPath(); ctx.arc(rx, ry, 2.4 / zoom, 0, Math.PI * 2)
+      ctx.fillStyle = ring.color; ctx.globalAlpha = alpha; ctx.fill(); ctx.globalAlpha = 1
+      if (ring.label && age < 0.8) {
+        const fontSize = Math.max(7, 9.5 / zoom)
+        ctx.font = `${fontSize}px 'Space Mono', monospace`
+        ctx.fillStyle = ring.color + Math.round(alpha * 220).toString(16).padStart(2, '0')
+        ctx.fillText(`${ring.kind === 'connect' ? '+' : '−'} ${ring.label}`, rx + 6 / zoom, ry - 6 / zoom)
+      }
+    }
+
     ctx.restore()
 
     // ── Heatmap — redrawn every frame so it tracks pan/zoom in sync ───────────
@@ -359,6 +429,38 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
     return () => { alive = false }
   }, [spawnArc, liveVisits])
 
+  // ── Presence: online sessions + connect/disconnect events ─
+  useEffect(() => { onlineRef.current = online ?? [] }, [online])
+
+  useEffect(() => {
+    if (!liveEvents?.length) return
+    const cv = canvasRef.current
+    const dpr = devicePixelRatio || 1
+    for (const ev of liveEvents) {
+      const key = `${ev.type}:${ev.sessionId}:${ev.ts}`
+      if (seenEventsRef.current.has(key)) continue
+      seenEventsRef.current.add(key)
+      if (ev.lat == null || ev.lon == null) continue
+      ringsRef.current.push({
+        lat: ev.lat, lon: ev.lon,
+        color: ev.type === 'connect' ? '#4ade80' : '#f87171',
+        born: Date.now(), kind: ev.type,
+        label: ev.city || ev.country,
+      })
+      if (ringsRef.current.length > 40) ringsRef.current.shift()
+      // A connect also fires a travelling arc toward the server
+      if (ev.type === 'connect' && cv) {
+        spawnArc(
+          { lat: ev.lat, lon: ev.lon, city: ev.city, country: ev.country, page: ev.page, timestamp: new Date(ev.ts).toISOString() },
+          cv.width / dpr, cv.height / dpr,
+        )
+      }
+    }
+    if (seenEventsRef.current.size > 500) {
+      seenEventsRef.current = new Set([...seenEventsRef.current].slice(-250))
+    }
+  }, [liveEvents, spawnArc])
+
   // ── External liveVisits prop ──────────────────────────────
   useEffect(() => {
     if (!liveVisits?.length) return
@@ -386,7 +488,7 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
       const count = 1 + Math.floor(Math.random() * 2)
       for (let i = 0; i < count; i++) {
         const v = history[Math.floor(Math.random() * history.length)]
-        spawnArc(v, w, h)
+        spawnArc(v, w, h, false)
       }
     }, 5000)
     return () => clearInterval(id)
@@ -447,28 +549,37 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
 
   const handleMouseUp = () => { draggingRef.current = false }
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    const rect = e.currentTarget.getBoundingClientRect()
-    const rawX = e.clientX - rect.left, rawY = e.clientY - rect.top
-
-    // Pivot zoom on cursor position
-    const baseX = (rawX - panRef.current.x) / zoomRef.current
-    const baseY = (rawY - panRef.current.y) / zoomRef.current
-    const factor = e.deltaY < 0 ? 1.18 : 0.85
+  // Shared zoom logic — pivots around a screen-space point so the spot
+  // under the pivot stays fixed (fixes the +/- buttons jumping to top-left)
+  const zoomAt = useCallback((pivotX: number, pivotY: number, factor: number) => {
+    const baseX = (pivotX - panRef.current.x) / zoomRef.current
+    const baseY = (pivotY - panRef.current.y) / zoomRef.current
     const newZoom = Math.min(12, Math.max(1, zoomRef.current * factor))
-    panRef.current = { x: rawX - baseX * newZoom, y: rawY - baseY * newZoom }
+    panRef.current = newZoom === 1 ? { x: 0, y: 0 } : { x: pivotX - baseX * newZoom, y: pivotY - baseY * newZoom }
     zoomRef.current = newZoom
-  }
+  }, [])
 
-  const zoomIn    = () => {
-    zoomRef.current = Math.min(12, zoomRef.current * 1.3)
+  // Native wheel listener — React's synthetic onWheel can be passive,
+  // which makes preventDefault() a no-op and scrolls the page while zooming
+  const wrapRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const rect = el.getBoundingClientRect()
+      zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 1.18 : 0.85)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [zoomAt])
+
+  const centerPivot = () => {
+    const el = wrapRef.current
+    return el ? { x: el.offsetWidth / 2, y: el.offsetHeight / 2 } : { x: 0, y: 0 }
   }
-  const zoomOut   = () => {
-    const newZ = Math.max(1, zoomRef.current * 0.77)
-    zoomRef.current = newZ
-    if (newZ === 1) panRef.current = { x: 0, y: 0 }
-  }
+  const zoomIn    = () => { const c = centerPivot(); zoomAt(c.x, c.y, 1.3) }
+  const zoomOut   = () => { const c = centerPivot(); zoomAt(c.x, c.y, 0.77) }
   const resetView = () => { zoomRef.current = 1; panRef.current = { x: 0, y: 0 } }
 
   return (
@@ -506,12 +617,12 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
 
       {/* Canvas stack */}
       <div
-        style={{ position: 'relative', width: '100%', height, userSelect: 'none' }}
+        ref={wrapRef}
+        style={{ position: 'relative', width: '100%', height, userSelect: 'none', touchAction: 'none' }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={() => { draggingRef.current = false; setTooltip(null) }}
-        onWheel={handleWheel}
       >
         <canvas
           ref={canvasRef}

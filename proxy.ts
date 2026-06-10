@@ -15,8 +15,62 @@ async function verifyTokenEdge(token: string, secret: string): Promise<boolean> 
   } catch { return false }
 }
 
-export async function middleware(request: NextRequest) {
+// ─── Maintenance flag ─────────────────────────────────────────────────────────
+// Reads Upstash directly when configured (fast + works on cold edge instances),
+// falls back to the settings API for local/file-system mode. Short cache so a
+// toggle propagates within a few seconds, stale value kept on fetch errors.
+
+let maintenanceCache: { value: boolean; at: number } = { value: false, at: 0 }
+const MAINTENANCE_TTL = 5_000
+
+async function fetchMaintenanceFlag(origin: string): Promise<boolean | null> {
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (url && token) {
+    try {
+      const res = await fetch(`${url}/get/reokiy:settings`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(2500),
+      })
+      if (res.ok) {
+        const d = await res.json() as { result: string | null }
+        if (!d.result) return false
+        const settings = typeof d.result === 'string' ? JSON.parse(d.result) : d.result
+        return !!settings?.maintenanceMode
+      }
+    } catch {}
+    return null
+  }
+  try {
+    const res = await fetch(`${origin}/api/settings/status`, { signal: AbortSignal.timeout(2500) })
+    if (res.ok) {
+      const d = await res.json() as { maintenance?: boolean }
+      return !!d.maintenance
+    }
+  } catch {}
+  return null
+}
+
+async function isMaintenanceOn(origin: string): Promise<boolean> {
+  if (Date.now() - maintenanceCache.at < MAINTENANCE_TTL) return maintenanceCache.value
+  const flag = await fetchMaintenanceFlag(origin)
+  if (flag !== null) maintenanceCache = { value: flag, at: Date.now() }
+  return maintenanceCache.value
+}
+
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Maintenance mode — admin keeps working, everything else goes to /maintenance
+  if (!pathname.startsWith('/admin') && pathname !== '/maintenance') {
+    if (await isMaintenanceOn(request.nextUrl.origin)) {
+      return NextResponse.redirect(new URL('/maintenance', request.url))
+    }
+  }
+  // When maintenance is off, /maintenance bounces back home
+  if (pathname === '/maintenance' && !(await isMaintenanceOn(request.nextUrl.origin))) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
 
   // Protect all /admin routes except /admin/login
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {

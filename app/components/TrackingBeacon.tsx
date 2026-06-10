@@ -63,5 +63,39 @@ export default function TrackingBeacon() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
 
+  // Presence heartbeat — lets the admin live map show connects/disconnects
+  useEffect(() => {
+    const beat = () => {
+      if (!sessionIdRef.current || document.visibilityState === 'hidden') return
+      fetch('/api/tracking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'heartbeat', page: lastTracked.current || '/', sessionId: sessionIdRef.current }),
+        keepalive: true,
+      }).catch(() => {})
+    }
+    const id = setInterval(beat, 15_000)
+
+    // Heartbeat immediately when the tab becomes visible again
+    const onVisible = () => { if (document.visibilityState === 'visible') beat() }
+    document.addEventListener('visibilitychange', onVisible)
+
+    // Explicit disconnect on page unload
+    const onLeave = () => {
+      if (sessionIdRef.current) {
+        navigator.sendBeacon('/api/tracking', JSON.stringify({
+          type: 'leave', page: lastTracked.current || '/', sessionId: sessionIdRef.current,
+        }))
+      }
+    }
+    window.addEventListener('pagehide', onLeave)
+
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pagehide', onLeave)
+    }
+  }, [])
+
   return null
 }

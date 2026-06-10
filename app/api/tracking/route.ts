@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { addVisit, updateVisitDuration, parseUA } from '@/app/lib/data'
+import { touchPresence, dropPresence } from '@/app/lib/presence'
+import { readSettings, attackRateLimit, getClientIp } from '@/app/lib/settings'
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,6 +9,24 @@ export async function POST(request: NextRequest) {
     const { page = '/', referrer = '', sessionId, type = 'pageview', duration } = body
 
     if (page.startsWith('/admin')) return NextResponse.json({ ok: true })
+
+    const settings = await readSettings()
+    if (!settings.trackingEnabled) return NextResponse.json({ ok: true })
+    if (settings.attackMode && !attackRateLimit(getClientIp(request.headers))) {
+      return NextResponse.json({ ok: false }, { status: 429 })
+    }
+
+    // Heartbeat — keeps the session marked as online
+    if (type === 'heartbeat' && sessionId) {
+      await touchPresence(sessionId, { page })
+      return NextResponse.json({ ok: true })
+    }
+
+    // Explicit disconnect (sendBeacon on pagehide)
+    if (type === 'leave' && sessionId) {
+      await dropPresence(sessionId)
+      return NextResponse.json({ ok: true })
+    }
 
     // Duration update request
     if (type === 'duration' && sessionId && duration != null) {
@@ -46,6 +66,9 @@ export async function POST(request: NextRequest) {
       ua, browser, os, device,
       sessionId: newSessionId, isNew,
     })
+
+    // Register the session as online right away
+    await touchPresence(newSessionId, { page, country, countryCode, city, lat, lon })
 
     const response = NextResponse.json({ ok: true, sessionId: newSessionId })
     if (isNew) {

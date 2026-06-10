@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { listRaffles } from '@/app/lib/raffles'
 
-// Revalidate every 30 seconds — active raffles change infrequently
-export const revalidate = 30
+// Must be dynamic: with ISR this route gets frozen at build time and the
+// home page shows "starting soon" even when giveaways are active.
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const all = await listRaffles()
@@ -12,6 +13,6 @@ export async function GET() {
 
   return NextResponse.json(
     { active, ended },
-    { headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' } }
+    { headers: { 'Cache-Control': 'no-store' } }
   )
 }

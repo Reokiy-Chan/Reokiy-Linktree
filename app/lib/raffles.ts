@@ -151,14 +151,14 @@ export async function deleteRaffle(id: string): Promise<void> {
 
 export async function enterRaffle(id: string, discordUsername: string): Promise<{ ok: boolean; error?: string }> {
   const raffle = await getRaffle(id)
-  if (!raffle) return { ok: false, error: 'Sorteo no encontrado' }
-  if (raffle.status !== 'active') return { ok: false, error: 'Este sorteo ya ha terminado' }
+  if (!raffle) return { ok: false, error: 'Giveaway not found' }
+  if (raffle.status !== 'active') return { ok: false, error: 'This giveaway has already ended' }
   if (raffle.entries.some(e => e.discordUsername.toLowerCase() === discordUsername.toLowerCase())) {
-    return { ok: false, error: 'Ya estás participando en este sorteo' }
+    return { ok: false, error: 'You are already in this giveaway' }
   }
   const banned = (raffle.bannedUsernames ?? []).map(b => b.toLowerCase())
   if (banned.includes(discordUsername.toLowerCase())) {
-    return { ok: false, error: 'No puedes participar en este sorteo' }
+    return { ok: false, error: 'You cannot join this giveaway' }
   }
   const newEntry: RaffleEntry = { discordUsername, enteredAt: new Date().toISOString() }
   await updateRaffle(id, { entries: [...raffle.entries, newEntry] })
@@ -168,9 +168,9 @@ export async function enterRaffle(id: string, discordUsername: string): Promise<
 // Add participant manually (admin only)
 export async function addParticipant(id: string, discordUsername: string): Promise<{ ok: boolean; error?: string }> {
   const raffle = await getRaffle(id)
-  if (!raffle) return { ok: false, error: 'Sorteo no encontrado' }
+  if (!raffle) return { ok: false, error: 'Giveaway not found' }
   if (raffle.entries.some(e => e.discordUsername.toLowerCase() === discordUsername.toLowerCase())) {
-    return { ok: false, error: 'Ya está participando' }
+    return { ok: false, error: 'Already participating' }
   }
   const newEntry: RaffleEntry = { discordUsername, enteredAt: new Date().toISOString() }
   await updateRaffle(id, { entries: [...raffle.entries, newEntry] })
@@ -180,7 +180,7 @@ export async function addParticipant(id: string, discordUsername: string): Promi
 // Remove participant (admin only)
 export async function removeParticipant(id: string, discordUsername: string): Promise<{ ok: boolean; error?: string }> {
   const raffle = await getRaffle(id)
-  if (!raffle) return { ok: false, error: 'Sorteo no encontrado' }
+  if (!raffle) return { ok: false, error: 'Giveaway not found' }
   const newEntries = raffle.entries.filter(
     e => e.discordUsername.toLowerCase() !== discordUsername.toLowerCase()
   )
@@ -198,8 +198,8 @@ export async function pickWinner(
   prizeId?: string
 ): Promise<{ ok: boolean; winner?: RaffleWinner; raffle?: Raffle; error?: string }> {
   const raffle = await getRaffle(id)
-  if (!raffle) return { ok: false, error: 'Sorteo no encontrado' }
-  if (raffle.entries.length === 0) return { ok: false, error: 'No hay participantes' }
+  if (!raffle) return { ok: false, error: 'Giveaway not found' }
+  if (raffle.entries.length === 0) return { ok: false, error: 'No participants' }
 
   const maxWinners = raffle.maxWinners ?? 1
   const currentWinners = raffle.winners ?? []
@@ -212,7 +212,7 @@ export async function pickWinner(
          !banned.has(e.discordUsername.toLowerCase())
   )
 
-  if (eligible.length === 0) return { ok: false, error: 'No quedan participantes elegibles' }
+  if (eligible.length === 0) return { ok: false, error: 'No eligible participants left' }
 
   const pickedEntry = eligible[Math.floor(Math.random() * eligible.length)]
 

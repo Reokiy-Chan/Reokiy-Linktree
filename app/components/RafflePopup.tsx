@@ -42,7 +42,7 @@ function RaffleDetail({ raffle, onBack }: { raffle: Raffle; onBack: () => void }
         body: JSON.stringify({ discordUsername: username.trim() }),
       })
       const data = await res.json()
-      setMsg({ text: res.ok ? '¡Participando! Suerte 🎲' : (data.error ?? 'Error'), ok: res.ok })
+      setMsg({ text: res.ok ? "You're in! Good luck 🎲" : (data.error ?? 'Error'), ok: res.ok })
     } catch {
       setMsg({ text: 'Error de conexión', ok: false })
     }
@@ -52,7 +52,7 @@ function RaffleDetail({ raffle, onBack }: { raffle: Raffle; onBack: () => void }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <button onClick={onBack} style={{ ...S, display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(254,240,244,0.4)', fontSize: 10, letterSpacing: '0.08em', padding: '0 0 18px 0', textTransform: 'uppercase' }}>
-        ← todos los sorteos
+        ← all giveaways
       </button>
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div>
@@ -61,7 +61,7 @@ function RaffleDetail({ raffle, onBack }: { raffle: Raffle; onBack: () => void }
             <span style={{ ...S, fontSize: 7, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '2px 9px', borderRadius: 20, flexShrink: 0, marginTop: 3, background: isActive ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${isActive ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)'}`, color: isActive ? '#4ade80' : 'rgba(254,240,244,0.3)' }}>{isActive ? '● activo' : '○ terminado'}</span>
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.3)' }}>{raffle.entries.length} participante{raffle.entries.length !== 1 ? 's' : ''}</span>
+            <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.3)' }}>{raffle.entries.length} participant{raffle.entries.length !== 1 ? 's' : ''}</span>
             {raffle.endsAt && isActive && <Countdown endsAt={raffle.endsAt} />}
             {raffle.endsAt && !isActive && <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.3)' }}>Terminó {new Date(raffle.endsAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</span>}
           </div>
@@ -88,14 +88,14 @@ function RaffleDetail({ raffle, onBack }: { raffle: Raffle; onBack: () => void }
 
         {raffle.winnerId && (
           <div style={{ background: 'rgba(255,215,0,0.07)', border: '1px solid rgba(255,215,0,0.22)', borderRadius: 12, padding: '13px 15px' }}>
-            <div style={{ ...S, fontSize: 8, color: 'rgba(255,215,0,0.5)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>ganador</div>
+            <div style={{ ...S, fontSize: 8, color: 'rgba(255,215,0,0.5)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>winner</div>
             <div style={{ ...S, fontSize: 15, color: '#ffd700' }}>🏆 {raffle.winnerId}</div>
           </div>
         )}
 
         {!isActive && raffle.entries.length > 0 && (
           <div>
-            <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 7 }}>participantes ({raffle.entries.length})</div>
+            <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 7 }}>participants ({raffle.entries.length})</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 160, overflowY: 'auto' }}>
               {raffle.entries.map((e, i) => (
                 <div key={i} style={{ ...S, fontSize: 11, padding: '7px 12px', background: e.discordUsername === raffle.winnerId ? 'rgba(255,215,0,0.07)' : 'rgba(255,255,255,0.025)', border: `1px solid ${e.discordUsername === raffle.winnerId ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.06)'}`, borderRadius: 8, color: e.discordUsername === raffle.winnerId ? '#ffd700' : 'var(--text)' }}>
@@ -108,7 +108,7 @@ function RaffleDetail({ raffle, onBack }: { raffle: Raffle; onBack: () => void }
 
         {isActive && (
           <div style={{ background: 'rgba(196,20,40,0.05)', border: '1px solid rgba(196,20,40,0.2)', borderRadius: 12, padding: '15px' }}>
-            <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>participar</div>
+            <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>participate</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <input value={username} onChange={e => { setUsername(e.target.value); setMsg(null) }} onKeyDown={e => { if (e.key === 'Enter') handleEnter() }} placeholder="tu username de Discord" style={{ ...S, flex: 1, padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,20,40,0.2)', borderRadius: 8, color: 'var(--text)', fontSize: 12, outline: 'none' }} />
               <button onClick={handleEnter} disabled={entering} style={{ ...S, padding: '9px 16px', borderRadius: 8, cursor: entering ? 'not-allowed' : 'pointer', background: entering ? 'rgba(196,20,40,0.08)' : 'rgba(196,20,40,0.22)', border: '1px solid rgba(196,20,40,0.4)', color: entering ? 'var(--text-muted)' : 'var(--text)', fontSize: 11, whiteSpace: 'nowrap' }}>
@@ -141,7 +141,7 @@ function RaffleCard({ raffle, onClick }: { raffle: Raffle; onClick: () => void }
         )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.28)' }}>{raffle.entries.length} participante{raffle.entries.length !== 1 ? 's' : ''}</span>
+            <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.28)' }}>{raffle.entries.length} participant{raffle.entries.length !== 1 ? 's' : ''}</span>
             {raffle.prizes.length > 0 && <span style={{ ...S, fontSize: 9, color: 'rgba(196,20,40,0.6)' }}>{raffle.prizes.length} premio{raffle.prizes.length !== 1 ? 's' : ''}</span>}
             {isActive && raffle.endsAt && <Countdown endsAt={raffle.endsAt} />}
           </div>
@@ -196,7 +196,7 @@ export default function RafflePopup({ open, onClose }: RafflePopupProps) {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 21, color: 'var(--text)', lineHeight: 1 }}>sorteos</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 21, color: 'var(--text)', lineHeight: 1 }}>giveaways</div>
             {!selected && <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.28)', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: 3 }}>gana premios exclusivos</div>}
           </div>
           <button onClick={() => { setSelected(null); onClose() }} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: 'rgba(254,240,244,0.35)', cursor: 'pointer', fontSize: 13, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
@@ -226,7 +226,7 @@ export default function RafflePopup({ open, onClose }: RafflePopupProps) {
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {displayed.length === 0 ? (
                 <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.2)', textAlign: 'center', padding: '36px 0', letterSpacing: '0.08em' }}>
-                  {tab === 'active' ? 'No hay sorteos activos ahora' : 'No hay sorteos terminados'}
+                  {tab === 'active' ? 'No active giveaways right now' : 'No ended giveaways'}
                 </div>
               ) : displayed.map(r => (
                 <RaffleCard key={r.id} raffle={r} onClick={() => setSelected(r)} />
