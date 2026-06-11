@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import Link from 'next/link'   // ← añadido
 
 type Section = 'overview' | 'live' | 'traffic' | 'sessions' | 'codes' | 'giveaways' | 'settings'
 
@@ -210,20 +211,26 @@ export default function AdminSidebar() {
         </>
       )}
 
-      {/* Current user */}
+      {/* Current user - ahora enlace a /admin/account */}
       {me && (
-        <div style={{ padding: '10px 14px', borderTop: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          {me.user.avatar
-            ? <img src={me.user.avatar} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(196,20,40,0.3)' }} />
-            : <div style={{ width: 30, height: 30, borderRadius: '50%', background: me.isRoot ? 'linear-gradient(135deg,#c41428,#e8195c)' : 'rgba(196,20,40,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-body)', fontSize: 10, color: '#fff' }}>{initials}</div>}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
-              {me.user.name}
-              {me.isRoot && <span style={{ fontSize: 8 }}>👑</span>}
+        <Link
+          href="/admin/account"
+          style={{ textDecoration: 'none', display: 'block' }}
+          onClick={() => setOpen(false)}
+        >
+          <div style={{ padding: '10px 14px', borderTop: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            {me.user.avatar
+              ? <img src={me.user.avatar} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(196,20,40,0.3)' }} />
+              : <div style={{ width: 30, height: 30, borderRadius: '50%', background: me.isRoot ? 'linear-gradient(135deg,#c41428,#e8195c)' : 'rgba(196,20,40,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-body)', fontSize: 10, color: '#fff' }}>{initials}</div>}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
+                {me.user.name}
+                {me.isRoot && <span style={{ fontSize: 8 }}>👑</span>}
+              </div>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(254,240,244,0.3)' }}>@{me.user.username}</div>
             </div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(254,240,244,0.3)' }}>@{me.user.username}</div>
           </div>
-        </div>
+        </Link>
       )}
 
       {/* Live indicator */}
