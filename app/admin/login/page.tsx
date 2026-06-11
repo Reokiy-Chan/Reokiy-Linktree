@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 
-type Mode = 'password' | 'key' | 'webauthn'
+type Mode = 'password' | 'webauthn'
 
 const FIELD: React.CSSProperties = {
   width: '100%', padding: '11px 14px', boxSizing: 'border-box',
@@ -11,26 +11,15 @@ const FIELD: React.CSSProperties = {
   outline: 'none', letterSpacing: '0.05em', transition: 'border-color 0.2s',
 }
 
-// ─── First-login setup modal ────────────────────────────────────────────────
+// ─── First-login setup modal (solo contraseña) ───────────────────────────────
 
 function SetupModal({ name, onDone }: { name: string; onDone: () => void }) {
-  const [step, setStep] = useState<'choose' | 'password' | 'key'>('choose')
+  const [step, setStep] = useState<'choose' | 'password'>('choose')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [key, setKey] = useState('')
-  const [copied, setCopied] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
-
-  const loadKey = async () => {
-    setStep('key'); setError('')
-    try {
-      const r = await fetch('/api/admin/auth/setup')
-      const d = await r.json()
-      if (d.key) setKey(d.key)
-    } catch {}
-  }
 
   const submit = async (body: object) => {
     setSaving(true); setError('')
@@ -81,7 +70,7 @@ function SetupModal({ name, onDone }: { name: string; onDone: () => void }) {
               <div style={{ fontSize: 32, marginBottom: 10, animation: 'sm-float 2.5s ease-in-out infinite' }}>🌙</div>
               <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 22, color: 'var(--text)' }}>welcome, {name}</div>
               <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', marginTop: 6 }}>
-                {step === 'choose' ? 'choose how you’ll log in' : step === 'password' ? 'set a password' : 'save your security key'}
+                {step === 'choose' ? 'choose how you’ll log in' : 'set a password'}
               </div>
             </div>
 
@@ -91,11 +80,6 @@ function SetupModal({ name, onDone }: { name: string; onDone: () => void }) {
                   <div style={{ fontSize: 24 }}>🔒</div>
                   <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text)', marginTop: 8 }}>set password</div>
                   <div style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(254,240,244,0.35)', marginTop: 3 }}>classic login</div>
-                </button>
-                <button onClick={loadKey} style={choiceStyle}>
-                  <div style={{ fontSize: 24 }}>🔑</div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text)', marginTop: 8 }}>security key</div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(254,240,244,0.35)', marginTop: 3 }}>passwordless</div>
                 </button>
               </div>
             )}
@@ -110,31 +94,6 @@ function SetupModal({ name, onDone }: { name: string; onDone: () => void }) {
                 {error && <div style={errStyle}>{error}</div>}
                 <button onClick={savePassword} disabled={saving} style={primaryBtn(saving)}>
                   {saving ? 'saving…' : 'set password →'}
-                </button>
-                <button onClick={() => { setStep('choose'); setError('') }} style={backBtn}>← back</button>
-              </div>
-            )}
-
-            {step === 'key' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'sm-rise 0.3s ease' }}>
-                <div style={{
-                  padding: '16px 14px', borderRadius: 12, textAlign: 'center',
-                  background: 'rgba(196,20,40,0.08)', border: '1px dashed rgba(196,20,40,0.4)',
-                  fontFamily: 'monospace', fontSize: 17, letterSpacing: '0.18em', color: '#fff',
-                  textShadow: '0 0 14px rgba(232,25,92,0.6)', wordBreak: 'break-all',
-                }}>{key || '····-····'}</div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => { navigator.clipboard.writeText(key).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) }) }} style={{ ...backBtn, flex: 1, color: copied ? '#4ade80' : 'rgba(254,240,244,0.5)', borderColor: copied ? 'rgba(74,222,128,0.4)' : 'rgba(255,255,255,0.12)' }}>
-                    {copied ? '✓ copied' : '⧉ copy'}
-                  </button>
-                  <button onClick={loadKey} style={{ ...backBtn, flex: 1 }}>↻ regenerate</button>
-                </div>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.35)', textAlign: 'center', lineHeight: 1.6 }}>
-                  ⚠ save this key somewhere safe — you’ll use it instead of a password and it won’t be shown again
-                </div>
-                {error && <div style={errStyle}>{error}</div>}
-                <button onClick={() => submit({ type: 'key', key })} disabled={saving || !key} style={primaryBtn(saving || !key)}>
-                  {saving ? 'saving…' : 'I saved it — continue →'}
                 </button>
                 <button onClick={() => { setStep('choose'); setError('') }} style={backBtn}>← back</button>
               </div>
@@ -177,7 +136,6 @@ export default function AdminLogin() {
   const [mode, setMode] = useState<Mode>('password')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [key, setKey] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [setupName, setSetupName] = useState<string | null>(null)
@@ -231,11 +189,7 @@ export default function AdminLogin() {
     try {
       const res = await fetch('/api/admin/auth', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          mode === 'password'
-            ? { username: username || 'root', password, method: 'password' }
-            : { username: username || 'root', securityKey: key, method: 'key' },
-        ),
+        body: JSON.stringify({ username: username || 'root', password, method: 'password' }),
       })
       const data = await res.json().catch(() => ({}))
       if (res.ok) {
@@ -269,7 +223,7 @@ export default function AdminLogin() {
           <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>reokiy • admin</div>
         </div>
 
-        {/* Mode switch with three tabs */}
+        {/* Mode switch: solo password y webauthn */}
         <div style={{ width: '100%', display: 'flex', background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 3 }}>
           <button
             onClick={() => { setMode('password'); setError(''); setWebauthnState('idle'); setWebauthnError('') }}
@@ -280,16 +234,6 @@ export default function AdminLogin() {
             }}
           >
             🔒 password
-          </button>
-          <button
-            onClick={() => { setMode('key'); setError(''); setWebauthnState('idle'); setWebauthnError('') }}
-            style={{
-              ...TAB_STYLE,
-              background: mode === 'key' ? 'rgba(196,20,40,0.22)' : 'transparent',
-              color: mode === 'key' ? 'var(--text)' : 'rgba(254,240,244,0.4)',
-            }}
-          >
-            🔑 key
           </button>
           <button
             onClick={() => { setMode('webauthn'); setError(''); setWebauthnState('idle'); setWebauthnError('') }}
@@ -310,22 +254,14 @@ export default function AdminLogin() {
               onFocus={e => (e.currentTarget.style.borderColor = 'rgba(196,20,40,0.5)')}
               onBlur={e => (e.currentTarget.style.borderColor = 'var(--glass-border)')} />
 
-            {mode === 'password' ? (
-              <input type="password" placeholder="password" value={password} autoComplete="current-password"
-                onChange={e => setPassword(e.target.value)} style={FIELD}
-                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(196,20,40,0.5)')}
-                onBlur={e => (e.currentTarget.style.borderColor = 'var(--glass-border)')} />
-            ) : (
-              <input placeholder="A1F3-9KQ2-77XB-…" value={key} autoComplete="off" spellCheck={false}
-                onChange={e => setKey(e.target.value.toUpperCase())}
-                style={{ ...FIELD, fontFamily: 'monospace', textAlign: 'center', letterSpacing: '0.12em' }}
-                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(196,20,40,0.5)')}
-                onBlur={e => (e.currentTarget.style.borderColor = 'var(--glass-border)')} />
-            )}
+            <input type="password" placeholder="password" value={password} autoComplete="current-password"
+              onChange={e => setPassword(e.target.value)} style={FIELD}
+              onFocus={e => (e.currentTarget.style.borderColor = 'rgba(196,20,40,0.5)')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'var(--glass-border)')} />
 
             {error && <div style={errStyle}>{error}</div>}
 
-            <button type="submit" disabled={loading || (mode === 'password' ? !password : !key)} style={primaryBtn(loading || (mode === 'password' ? !password : !key))}>
+            <button type="submit" disabled={loading || !password} style={primaryBtn(loading || !password)}>
               {loading ? 'signing in…' : 'sign in'}
             </button>
           </form>

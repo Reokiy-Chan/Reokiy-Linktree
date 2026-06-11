@@ -27,7 +27,7 @@ export interface AdminUser {
   passwordHash?: string       // set during first-time setup
   securityKeyHash?: string    // alternative login credential (Flipper-style key)
   otpHash?: string            // one-time password for first login (hashed)
-  authMethod: 'password' | 'key'   // how they finished setup
+  authMethod: 'password' | 'key' | 'webauthn'   // how they finished setup
   pendingSetup: boolean       // true until they set a password / key
   permissions: Section[]      // granted sections (root implicitly has all)
   isRoot?: boolean
@@ -48,7 +48,7 @@ export interface SafeUser {
   username: string
   name: string
   avatar?: string
-  authMethod: 'password' | 'key'
+  authMethod: 'password' | 'key' | 'webauthn'
   pendingSetup: boolean
   permissions: Section[]
   isRoot?: boolean
