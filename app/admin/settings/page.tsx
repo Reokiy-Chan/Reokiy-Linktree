@@ -52,11 +52,24 @@ export default function SettingsPage() {
   const [message, setMessage] = useState('')
   const [msgSaved, setMsgSaved] = useState(false)
   const [toast, setToast] = useState('')
+  const [credentials, setCredentials] = useState<{
+    id: string; name: string; createdAt: string; transports?: string[]
+  }[]>([])
+  const [registerState, setRegisterState] = useState<'idle' | 'registering' | 'done' | 'error'>('idle')
+  const [registerError, setRegisterError] = useState('')
+  const [newKeyName, setNewKeyName] = useState('Flipper Zero')
 
   useEffect(() => {
     fetch('/api/admin/settings')
       .then(r => { if (r.status === 401) { router.replace('/admin/login'); return null } return r.json() })
       .then(d => { if (d?.settings) { setSettings(d.settings); setMessage(d.settings.maintenanceMessage ?? '') } })
+      .catch(() => {})
+
+    fetch('/api/admin/me')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.user?.webauthnCredentials) setCredentials(d.user.webauthnCredentials)
+      })
       .catch(() => {})
   }, [router])
 
@@ -75,6 +88,43 @@ export default function SettingsPage() {
     } catch {}
     setSaving(null)
   }, [])
+
+  const registerKey = async () => {
+    setRegisterState('registering')
+    setRegisterError('')
+    try {
+      const { startRegistration } = await import('@simplewebauthn/browser')
+
+      const optRes = await fetch('/api/admin/webauthn/register/options', { method: 'POST' })
+      if (!optRes.ok) throw new Error('No se pudieron obtener opciones de registro')
+      const { _token, ...options } = await optRes.json()
+
+      const attestation = await startRegistration({ optionsJSON: options })
+
+      const verRes = await fetch('/api/admin/webauthn/register/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...attestation, _token, name: newKeyName }),
+      })
+      const data = await verRes.json()
+      if (!verRes.ok) throw new Error(data.error ?? 'Registro fallido')
+
+      setRegisterState('done')
+      // Recargar lista
+      const meRes = await fetch('/api/admin/me')
+      const me = await meRes.json()
+      if (me?.user?.webauthnCredentials) setCredentials(me.user.webauthnCredentials)
+      setTimeout(() => setRegisterState('idle'), 2000)
+    } catch (e: unknown) {
+      setRegisterError((e as Error).message)
+      setRegisterState('error')
+    }
+  }
+
+  const deleteKey = async (id: string) => {
+    await fetch(`/api/admin/webauthn/credentials/${encodeURIComponent(id)}`, { method: 'DELETE' })
+    setCredentials(prev => prev.filter(c => c.id !== id))
+  }
 
   if (!settings) {
     return <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.3)', textAlign: 'center', paddingTop: 60, letterSpacing: '0.1em' }}>loading…</div>
@@ -183,6 +233,81 @@ export default function SettingsPage() {
             {saving === 'message' ? 'saving…' : msgSaved ? '✓ saved' : 'save message'}
           </button>
         </div>
+      </div>
+
+      {/* ─── Llaves de seguridad U2F ───────────────────────────────────── */}
+      <div style={{
+        border: '1px solid var(--glass-border)', borderRadius: 14,
+        background: 'rgba(255,255,255,0.02)', overflow: 'hidden', marginTop: 16,
+      }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 17, color: 'var(--text)' }}>
+            Llaves de seguridad U2F
+          </div>
+          <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 3, letterSpacing: '0.06em' }}>
+            Dispositivos registrados para iniciar sesión sin contraseña
+          </div>
+        </div>
+
+        {credentials.length === 0 && (
+          <div style={{ padding: '20px', textAlign: 'center', fontSize: 10, color: 'rgba(254,240,244,0.3)' }}>
+            No hay llaves registradas
+          </div>
+        )}
+
+        {credentials.map(cred => (
+          <div key={cred.id} style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px',
+            borderBottom: '1px solid var(--glass-border)',
+          }}>
+            <span style={{ fontSize: 18, color: 'rgba(255,130,60,0.7)' }}>🔑</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: 'var(--text)' }}>{cred.name}</div>
+              <div style={{ fontSize: 8, color: 'var(--text-muted)', marginTop: 2, letterSpacing: '0.06em' }}>
+                Registrada {new Date(cred.createdAt).toLocaleDateString('es-ES')}
+                {cred.transports?.length ? ` · ${cred.transports.join(', ')}` : ''}
+              </div>
+            </div>
+            <button
+              onClick={() => deleteKey(cred.id)}
+              style={{
+                background: 'none', border: '1px solid rgba(196,20,40,0.25)', borderRadius: 6,
+                padding: '5px 10px', color: 'rgba(196,20,40,0.7)', fontSize: 9,
+                fontFamily: 'var(--font-body)', cursor: 'pointer', letterSpacing: '0.08em',
+              }}
+            >
+              eliminar
+            </button>
+          </div>
+        ))}
+
+        {/* Añadir nueva llave */}
+        <div style={{ padding: '14px 20px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            value={newKeyName}
+            onChange={e => setNewKeyName(e.target.value)}
+            placeholder="Nombre del dispositivo"
+            style={{
+              flex: 1, minWidth: 160, padding: '8px 12px',
+              background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)',
+              borderRadius: 8, color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 11, outline: 'none',
+            }}
+          />
+          <button
+            onClick={registerKey}
+            disabled={registerState === 'registering' || !newKeyName.trim()}
+            style={{
+              padding: '8px 16px', background: 'var(--primary)', border: 'none', borderRadius: 8,
+              color: '#fff', fontFamily: 'var(--font-body)', fontSize: 10, cursor: 'pointer',
+              letterSpacing: '0.08em', opacity: registerState === 'registering' ? 0.6 : 1,
+            }}
+          >
+            {registerState === 'registering' ? 'esperando Flipper…' : registerState === 'done' ? '✓ registrada' : '+ registrar llave'}
+          </button>
+        </div>
+        {registerError && (
+          <div style={{ padding: '0 20px 12px', fontSize: 10, color: '#f87171' }}>{registerError}</div>
+        )}
       </div>
 
       <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.18)', marginTop: 18, letterSpacing: '0.08em', textAlign: 'center' }}>
