@@ -127,6 +127,75 @@ function GiftBoxPreview({
   )
 }
 
+function CodeDetailModal({
+  code, onClose, onUpdated, onDeleted,
+}: {
+  code: RedeemCode
+  onClose: () => void
+  onUpdated: (c: RedeemCode) => void
+  onDeleted: (id: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (!confirm(`¿Borrar el código ${code.code}?`)) return
+    setDeleting(true)
+    const r = await fetch(`/api/admin/codes/${code.id}`, { method: 'DELETE' })
+    if (r.ok) { onDeleted(code.id); onClose() }
+    setDeleting(false)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(5,0,7,0.85)', backdropFilter: 'blur(8px)', padding: 16 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ width: '100%', maxWidth: 420, background: '#0a0010', border: '1px solid rgba(196,20,40,0.3)', borderRadius: 16, padding: 24, maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+          <span style={{ ...S, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.75)' }}>
+            {editing ? 'editando código' : 'detalles del código'}
+          </span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {!editing && (
+              <button onClick={() => setEditing(true)} style={{ ...S, padding: '5px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,20,40,0.3)', borderRadius: 6, color: 'rgba(196,20,40,0.8)', fontSize: 9, cursor: 'pointer' }}>✎ editar</button>
+            )}
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(254,240,244,0.35)', cursor: 'pointer', fontSize: 16 }}>✕</button>
+          </div>
+        </div>
+
+        {editing ? (
+          // Reusar el componente Modal existente pero en modo edición
+          // Pasar code como initial y onCreated como onUpdated
+          <CodeEditForm code={code} onSaved={c => { onUpdated(c); setEditing(false) }} onCancel={() => setEditing(false)} />
+        ) : (
+          <CodeDetailView code={code} onDelete={handleDelete} deleting={deleting} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CodeDetailView({ code, onDelete, deleting }: { code: RedeemCode; onDelete: () => void; deleting: boolean }) {
+  const b = BADGE[code.used ? 'used' : code.rewardType]
+  return (
+    <>
+      <div style={{ fontFamily: 'monospace', fontSize: 20, color: '#fee0f4', marginBottom: 16, letterSpacing: '0.1em' }}>{code.code}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 14px', ...S, fontSize: 10, marginBottom: 16 }}>
+        <span style={{ color: 'rgba(254,240,244,0.35)' }}>tipo</span>
+        <span><Badge type={code.rewardType} used={code.used} /></span>
+        {code.rewardTitle && <><span style={{ color: 'rgba(254,240,244,0.35)' }}>título</span><span style={{ color: 'var(--text)' }}>{code.rewardTitle}</span></>}
+        {code.adminNote && <><span style={{ color: 'rgba(254,240,244,0.35)' }}>nota</span><span style={{ color: 'rgba(254,240,244,0.5)' }}>{code.adminNote}</span></>}
+        {code.used && code.usedAt && <><span style={{ color: 'rgba(254,240,244,0.35)' }}>usado</span><span style={{ color: 'rgba(254,240,244,0.4)' }}>{new Date(code.usedAt).toLocaleDateString('es-ES')}</span></>}
+        <span style={{ color: 'rgba(254,240,244,0.35)' }}>creado</span>
+        <span style={{ color: 'rgba(254,240,244,0.3)' }}>{new Date(code.createdAt).toLocaleDateString('es-ES')}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button onClick={() => navigator.clipboard.writeText(code.code)} style={{ ...S, flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, color: 'rgba(254,240,244,0.5)', fontSize: 9, cursor: 'pointer' }}>⧉ copiar código</button>
+        <button onClick={onDelete} disabled={deleting} style={{ ...S, padding: '7px 12px', background: 'none', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 7, color: 'rgba(254,240,244,0.3)', fontSize: 9, cursor: 'pointer' }}>{deleting ? '…' : '🗑'}</button>
+      </div>
+    </>
+  )
+}
+
 function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: RedeemCode) => void }) {
   const [step, setStep] = useState<'form' | 'done'>('form')
   const [rewardType, setRewardType] = useState<RewardType>('text')
@@ -741,6 +810,7 @@ export default function CodesPage() {
   const [showModal, setShowModal] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [activeFilter, setActiveFilter] = useState<'todos' | 'gift' | 'scratch' | 'link' | 'image'>('todos')
+  const [detailCode, setDetailCode] = useState<RedeemCode | null>(null)
 
   const load = async () => {
     const r = await fetch('/api/admin/codes')
@@ -856,6 +926,7 @@ export default function CodesPage() {
                 return (
                   <div
                     key={code.id}
+                    onClick={() => setDetailCode(code)}
                     style={{
                       border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10,
                       overflow: 'hidden', background: 'rgba(12,0,16,0.8)',
@@ -960,6 +1031,14 @@ export default function CodesPage() {
         <Modal
           onClose={() => setShowModal(false)}
           onCreated={c => { setCodes(prev => [c, ...prev]) }}
+        />
+      )}
+      {detailCode && (
+        <CodeDetailModal
+          code={detailCode}
+          onClose={() => setDetailCode(null)}
+          onUpdated={c => { setCodes(prev => prev.map(x => x.id === c.id ? c : x)); setDetailCode(c) }}
+          onDeleted={id => { setCodes(prev => prev.filter(x => x.id !== id)); setDetailCode(null) }}
         />
       )}
     </>
