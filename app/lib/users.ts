@@ -1,0 +1,400 @@
+import path from 'path'
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
+import { randomBytes } from 'crypto'
+import { USE_KV, getRedis } from './redis'
+import { hashPassword, verifyPassword } from './auth'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+// Sections that can be granted to a user. 'users' is root-only and never granted.
+export const SECTIONS = ['overview', 'live', 'traffic', 'sessions', 'codes', 'giveaways', 'settings'] as const
+export type Section = typeof SECTIONS[number]
+
+export interface WebAuthnCredential {
+  id: string           // base64url — es el credentialID del autenticador
+  publicKey: string    // base64url — clave pública COSE serializada
+  counter: number      // contador de firmas (anti-replay)
+  transports?: string[]
+  name: string         // nombre amigable, e.g. "Flipper Zero"
+  createdAt: string
+}
+
+export interface AdminUser {
+  id: string
+  username: string            // unique login handle (lowercase)
+  name: string                // display name
+  avatar?: string             // profile photo URL
+  passwordHash?: string       // set during first-time setup
+  securityKeyHash?: string    // alternative login credential (Flipper-style key)
+  otpHash?: string            // one-time password for first login (hashed)
+  authMethod: 'password' | 'key'   // how they finished setup
+  pendingSetup: boolean       // true until they set a password / key
+  permissions: Section[]      // granted sections (root implicitly has all)
+  isRoot?: boolean
+  createdAt: string
+  createdBy?: string
+  lastLogin?: string
+  webauthnCredentials?: WebAuthnCredential[]
+}
+
+// What the client receives (never leak hashes)
+export interface SafeUser {
+  id: string
+  username: string
+  name: string
+  avatar?: string
+  authMethod: 'password' | 'key'
+  pendingSetup: boolean
+  permissions: Section[]
+  isRoot?: boolean
+  createdAt: string
+  lastLogin?: string
+}
+
+export function toSafeUser(u: AdminUser): SafeUser {
+  return {
+    id: u.id, username: u.username, name: u.name, avatar: u.avatar,
+    authMethod: u.authMethod, pendingSetup: u.pendingSetup,
+    permissions: u.permissions, isRoot: u.isRoot,
+    createdAt: u.createdAt, lastLogin: u.lastLogin,
+  }
+}
+
+// ─── Storage ──────────────────────────────────────────────────────────────────
+
+const KV_KEY = 'reokiy:users'
+const DATA_DIR = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'data')
+const USERS_FILE = path.join(DATA_DIR, 'users.json')
+const ROOT_ID = 'root'
+
+function safeParse<T>(v: unknown): T | null {
+  if (v === null || v === undefined) return null
+  if (typeof v === 'object') return v as T
+  if (typeof v === 'string') { try { return JSON.parse(v) as T } catch { return null } }
+  return null
+}
+
+function fsRead(): AdminUser[] {
+  try {
+    if (!existsSync(USERS_FILE)) return []
+    return JSON.parse(readFileSync(USERS_FILE, 'utf-8')) as AdminUser[]
+  } catch { return [] }
+}
+
+function fsWrite(users: AdminUser[]): void {
+  try {
+    if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true })
+    writeFileSync(USERS_FILE, JSON.stringify(users, null, 2))
+  } catch {}
+}
+
+async function readAll(): Promise<AdminUser[]> {
+  if (USE_KV) {
+    const kv = await getRedis()
+    const raw = await kv.hgetall(KV_KEY)
+    if (!raw) return []
+    return Object.values(raw).map(v => safeParse<AdminUser>(v)).filter(Boolean) as AdminUser[]
+  }
+  return fsRead()
+}
+
+async function writeOne(user: AdminUser): Promise<void> {
+  if (USE_KV) {
+    const kv = await getRedis()
+    await kv.hset(KV_KEY, { [user.id]: JSON.stringify(user) })
+    return
+  }
+  const users = fsRead()
+  const idx = users.findIndex(u => u.id === user.id)
+  if (idx === -1) users.push(user); else users[idx] = user
+  fsWrite(users)
+}
+
+async function removeOne(id: string): Promise<void> {
+  if (USE_KV) {
+    const kv = await getRedis()
+    await kv.hdel(KV_KEY, id)
+    return
+  }
+  fsWrite(fsRead().filter(u => u.id !== id))
+}
+
+// ─── Root seeding ─────────────────────────────────────────────────────────────
+// The root account always exists. Its password lives in the environment
+// (ROOT_PASSWORD, falling back to ADMIN_PASSWORD). We persist a record only for
+// metadata (name, avatar, optional security key) — the password is never stored.
+let cachedRootBcrypt: string | null = null
+
+async function getRootBcryptHash(): Promise<string> {
+  if (cachedRootBcrypt) return cachedRootBcrypt
+  const plain = process.env.ROOT_PASSWORD ?? process.env.ADMIN_PASSWORD ?? 'reokiy_admin'
+  cachedRootBcrypt = await hashPassword(plain)
+  return cachedRootBcrypt
+}
+
+export async function ensureRoot(): Promise<AdminUser> {
+  const all = await readAll()
+  let root = all.find(u => u.id === ROOT_ID)
+  if (!root) {
+    root = {
+      id: ROOT_ID, username: 'root', name: 'Root', authMethod: 'password',
+      pendingSetup: false, permissions: [...SECTIONS], isRoot: true,
+      createdAt: new Date().toISOString(),
+    }
+    await writeOne(root)
+  }
+  return root
+}
+
+function rootPassword(): string {
+  return process.env.ROOT_PASSWORD ?? process.env.ADMIN_PASSWORD ?? 'reokiy_admin'
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+export async function listUsers(): Promise<AdminUser[]> {
+  await ensureRoot()
+  const all = await readAll()
+  return all.sort((a, b) => (a.isRoot ? -1 : b.isRoot ? 1 : a.createdAt.localeCompare(b.createdAt)))
+}
+
+export async function getUser(id: string): Promise<AdminUser | null> {
+  return (await readAll()).find(u => u.id === id) ?? null
+}
+
+export async function getUserByUsername(username: string): Promise<AdminUser | null> {
+  const u = username.trim().toLowerCase()
+  return (await readAll()).find(x => x.username.toLowerCase() === u) ?? null
+}
+
+function genCode(groups = 2, len = 4): string {
+  const alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const bytes = randomBytes(groups * len)
+  let out = ''
+  for (let g = 0; g < groups; g++) {
+    if (g) out += '-'
+    for (let i = 0; i < len; i++) out += alpha[bytes[g * len + i] % alpha.length]
+  }
+  return out
+}
+
+export function genSecurityKey(): string {
+  return genCode(5, 4)
+}
+
+export async function createUser(
+  input: { username: string; name: string; avatar?: string; permissions: Section[]; createdBy?: string }
+): Promise<{ ok: boolean; user?: AdminUser; otp?: string; error?: string }> {
+  const username = input.username.trim().toLowerCase()
+  if (!username || !/^[a-z0-9_.-]{2,24}$/.test(username)) {
+    return { ok: false, error: 'Username must be 2-24 chars (a-z, 0-9, . _ -)' }
+  }
+  if (username === 'root') return { ok: false, error: 'Reserved username' }
+  if (await getUserByUsername(username)) return { ok: false, error: 'Username already taken' }
+
+  const otp = genCode(2, 4)
+  const user: AdminUser = {
+    id: crypto.randomUUID(),
+    username,
+    name: input.name.trim() || username,
+    avatar: input.avatar,
+    otpHash: await hashPassword(otp),          // ← async
+    authMethod: 'password',
+    pendingSetup: true,
+    permissions: input.permissions.filter(p => SECTIONS.includes(p)),
+    createdAt: new Date().toISOString(),
+    createdBy: input.createdBy,
+  }
+  await writeOne(user)
+  return { ok: true, user, otp }
+}
+
+export async function updateUser(id: string, patch: Partial<AdminUser>): Promise<AdminUser | null> {
+  const user = await getUser(id)
+  if (!user) return null
+  const { id: _id, isRoot: _r, createdAt: _c, ...safe } = patch
+  const updated = { ...user, ...safe }
+  await writeOne(updated)
+  return updated
+}
+
+export async function deleteUser(id: string): Promise<{ ok: boolean; error?: string }> {
+  if (id === ROOT_ID) return { ok: false, error: 'Cannot delete root' }
+  const user = await getUser(id)
+  if (!user) return { ok: false, error: 'User not found' }
+  if (user.isRoot) return { ok: false, error: 'Cannot delete root' }
+  await removeOne(id)
+  return { ok: true }
+}
+
+export async function resetOtp(id: string): Promise<{ ok: boolean; otp?: string; error?: string }> {
+  const user = await getUser(id)
+  if (!user || user.isRoot) return { ok: false, error: 'User not found' }
+  const otp = genCode(2, 4)
+  await writeOne({ ...user, otpHash: await hashPassword(otp), pendingSetup: true })
+  return { ok: true, otp }
+}
+
+// ─── Login resolution con migración automática ───────────────────────────────
+
+export type LoginResult =
+  | { ok: true; kind: 'session'; user: AdminUser }
+  | { ok: true; kind: 'setup'; user: AdminUser }
+  | { ok: false; error: string }
+
+async function migrateHash(user: AdminUser, plain: string, field: 'passwordHash' | 'securityKeyHash' | 'otpHash'): Promise<AdminUser> {
+  const newHash = await hashPassword(plain)
+  const updated = { ...user, [field]: newHash }
+  await writeOne(updated)
+  return updated
+}
+
+export async function resolveLogin(
+  username: string,
+  credential: string,
+  method: 'password' | 'key',
+): Promise<LoginResult> {
+  const uname = username.trim().toLowerCase()
+
+  // --- ROOT (contraseña desde variable de entorno) ---
+  if (uname === 'root') {
+    const root = await ensureRoot()
+    if (method === 'password') {
+      const rootHash = await getRootBcryptHash()
+      const { ok, needsUpgrade } = await verifyPassword(credential, rootHash)
+      if (ok) return { ok: true, kind: 'session', user: root }
+    } else if (root.securityKeyHash) {
+      const { ok, needsUpgrade } = await verifyPassword(credential, root.securityKeyHash)
+      if (ok) {
+        if (needsUpgrade) {
+          // Migrar security key de root a bcrypt
+          const newHash = await hashPassword(credential)
+          await writeOne({ ...root, securityKeyHash: newHash })
+        }
+        return { ok: true, kind: 'session', user: root }
+      }
+    }
+    return { ok: false, error: 'Invalid credentials' }
+  }
+
+  const user = await getUserByUsername(uname)
+  if (!user) return { ok: false, error: 'Invalid credentials' }
+
+  // --- Usuario en setup (solo OTP) ---
+  if (user.pendingSetup) {
+    if (method !== 'password' || !user.otpHash) {
+      return { ok: false, error: 'Use your one-time password to set up your account' }
+    }
+    const { ok, needsUpgrade } = await verifyPassword(credential, user.otpHash)
+    if (!ok) return { ok: false, error: 'Invalid one-time password' }
+    if (needsUpgrade) {
+      // Migrar OTP a bcrypt (aunque luego se borrará tras completar setup)
+      await migrateHash(user, credential, 'otpHash')
+    }
+    return { ok: true, kind: 'setup', user }
+  }
+
+  // --- Usuario normal ---
+  const field = method === 'password' ? 'passwordHash' : 'securityKeyHash'
+  const storedHash = user[field]
+  if (!storedHash) return { ok: false, error: 'Invalid credentials' }
+
+  const { ok, needsUpgrade } = await verifyPassword(credential, storedHash)
+  if (!ok) return { ok: false, error: 'Invalid credentials' }
+
+  let finalUser = user
+  if (needsUpgrade) {
+    // Migrar automáticamente a bcrypt
+    finalUser = await migrateHash(user, credential, field)
+  }
+  return { ok: true, kind: 'session', user: finalUser }
+}
+
+export async function completeSetup(
+  id: string,
+  choice: { type: 'password'; password: string } | { type: 'key'; key: string },
+): Promise<{ ok: boolean; user?: AdminUser; error?: string }> {
+  const user = await getUser(id)
+  if (!user) return { ok: false, error: 'User not found' }
+
+  if (choice.type === 'password') {
+    if (!choice.password || choice.password.length < 6) {
+      return { ok: false, error: 'Password must be at least 6 characters' }
+    }
+    const updated: AdminUser = {
+      ...user,
+      passwordHash: await hashPassword(choice.password),
+      authMethod: 'password',
+      pendingSetup: false,
+      otpHash: undefined,
+    }
+    await writeOne(updated)
+    return { ok: true, user: updated }
+  }
+
+  // key login
+  if (!choice.key || choice.key.length < 8) {
+    return { ok: false, error: 'Invalid security key' }
+  }
+  const updated: AdminUser = {
+    ...user,
+    securityKeyHash: await hashPassword(choice.key),
+    authMethod: 'key',
+    pendingSetup: false,
+    otpHash: undefined,
+  }
+  await writeOne(updated)
+  return { ok: true, user: updated }
+}
+
+export async function setRootSecurityKey(key: string | null): Promise<void> {
+  const root = await ensureRoot()
+  await writeOne({
+    ...root,
+    securityKeyHash: key ? await hashPassword(key) : undefined,
+  })
+}
+
+export async function touchLastLogin(id: string): Promise<void> {
+  const user = await getUser(id)
+  if (user) await writeOne({ ...user, lastLogin: new Date().toISOString() })
+}
+
+// ─── WebAuthn credential management ──────────────────────────────────────────
+
+export async function addWebAuthnCredential(userId: string, cred: WebAuthnCredential): Promise<void> {
+  const user = userId === ROOT_ID ? await ensureRoot() : await getUser(userId)
+  if (!user) return
+  const existing = user.webauthnCredentials ?? []
+  // Evitar duplicados por ID
+  if (existing.some(c => c.id === cred.id)) return
+  await updateUser(userId, { webauthnCredentials: [...existing, cred] })
+}
+
+export async function updateWebAuthnCounter(userId: string, credId: string, newCounter: number): Promise<void> {
+  const user = userId === ROOT_ID ? await ensureRoot() : await getUser(userId)
+  if (!user) return
+  const creds = (user.webauthnCredentials ?? []).map(c =>
+    c.id === credId ? { ...c, counter: newCounter } : c
+  )
+  await updateUser(userId, { webauthnCredentials: creds })
+}
+
+export async function removeWebAuthnCredential(userId: string, credId: string): Promise<void> {
+  const user = userId === ROOT_ID ? await ensureRoot() : await getUser(userId)
+  if (!user) return
+  await updateUser(userId, {
+    webauthnCredentials: (user.webauthnCredentials ?? []).filter(c => c.id !== credId),
+  })
+}
+
+/** Busca un usuario que tenga una credencial con ese credentialID. */
+export async function findUserByCredentialId(credId: string): Promise<AdminUser | null> {
+  const all = await listUsers()
+  // Incluir root
+  const root = await ensureRoot()
+  for (const u of [root, ...all]) {
+    if (u.webauthnCredentials?.some(c => c.id === credId)) return u
+  }
+  return null
+}
