@@ -6,10 +6,15 @@ import { appendAudit } from '@/app/lib/audit'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// True if the session may manage settings (root, or has the 'settings' grant)
+// Any logged-in non-setup admin (root, owner, or admin) may manage settings
 function canManage(session: Awaited<ReturnType<typeof getSession>>): boolean {
   if (!session || session.setup) return false
-  return session.r === 'root' || session.p === 'all' || (Array.isArray(session.p) && session.p.includes('settings'))
+  if (session.r === 'root') return true
+  if (session.p === 'all') return true
+  if (Array.isArray(session.p)) {
+    return session.p.includes('admin') || session.p.includes('owner') || session.p.includes('settings')
+  }
+  return false
 }
 
 export async function GET(req: NextRequest) {
@@ -22,7 +27,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!canManage(await getSession(req))) {
+  const session = await getSession(req)
+  if (!canManage(session)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   try {
@@ -34,11 +40,10 @@ export async function PATCH(req: NextRequest) {
     if (typeof body.redeemEnabled === 'boolean') patch.redeemEnabled = body.redeemEnabled
     if (typeof body.rafflesEnabled === 'boolean') patch.rafflesEnabled = body.rafflesEnabled
     if (typeof body.trackingEnabled === 'boolean') patch.trackingEnabled = body.trackingEnabled
-    const session2 = await getSession(req)
     const settings = await updateSettings(patch)
     await appendAudit({
       action: 'settings.update',
-      actorId: session2?.uid ?? 'unknown', actorName: session2?.u ?? 'unknown', actorUsername: session2?.u ?? 'unknown',
+      actorId: session!.uid ?? 'unknown', actorName: session!.u ?? 'unknown', actorUsername: session!.u ?? 'unknown',
       target: Object.keys(patch).join(', '),
       detail: JSON.stringify(patch),
     }).catch(() => {})

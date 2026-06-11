@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { addVisit, updateVisitDuration, parseUA } from '@/app/lib/data'
+import { addVisit, updateVisitDuration, parseUA, detectBot } from '@/app/lib/data'
 import { touchPresence, dropPresence } from '@/app/lib/presence'
-import { readSettings, attackRateLimit, getTrueClientIp  } from '@/app/lib/settings'
+import { readSettings, attackRateLimit, getTrueClientIp } from '@/app/lib/settings'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,9 +11,18 @@ export async function POST(request: NextRequest) {
     if (page.startsWith('/admin')) return NextResponse.json({ ok: true })
 
     const settings = await readSettings()
-    // Usar getTrueClientIp en lugar de la lógica inline
-    if (settings.attackMode && !attackRateLimit(getTrueClientIp(request.headers))) {
-      return NextResponse.json({ ok: false }, { status: 429 })
+    const ip = getTrueClientIp(request.headers)
+
+    if (settings.attackMode) {
+      // Rate limit check
+      if (!attackRateLimit(ip)) {
+        return NextResponse.json({ ok: false }, { status: 429 })
+      }
+      // Captcha cookie check — bots won't have cf_verified
+      const cfVerified = request.cookies.get('cf_verified')?.value
+      if (!cfVerified) {
+        return NextResponse.json({ ok: false, captchaRequired: true }, { status: 403 })
+      }
     }
 
     // Heartbeat — keeps the session marked as online
@@ -34,16 +43,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    // Obtener IP real con la función centralizada
-    const ip = getTrueClientIp(request.headers)
+    if (!settings.trackingEnabled) return NextResponse.json({ ok: true })
+
     const ua = request.headers.get('user-agent') ?? ''
     const { browser, os, device } = parseUA(ua)
+    const { isBot, reason: botReason } = detectBot(ua, request.headers)
 
     let country: string | undefined, countryCode: string | undefined, city: string | undefined
     let lat: number | undefined, lon: number | undefined
 
     const isLocal = !ip || ip === '::1' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.')
-    if (!isLocal) {
+    if (!isLocal && !isBot) {
+      // Skip geo lookup for bots — save quota
       try {
         const geo = await fetch(`http://ip-api.com/json/${ip}?fields=country,countryCode,city,lat,lon`, { signal: AbortSignal.timeout(2000) })
         if (geo.ok) {
@@ -65,13 +76,16 @@ export async function POST(request: NextRequest) {
       referrer: referrer || undefined, ip: ip || undefined,
       ua, browser, os, device,
       sessionId: newSessionId, isNew,
+      isBot, botReason,
     })
 
-    // Register the session as online right away
-    await touchPresence(newSessionId, { page, country, countryCode, city, lat, lon })
+    // Only register presence for real users
+    if (!isBot) {
+      await touchPresence(newSessionId, { page, country, countryCode, city, lat, lon })
+    }
 
     const response = NextResponse.json({ ok: true, sessionId: newSessionId })
-    if (isNew) {
+    if (isNew && !isBot) {
       response.cookies.set('visitor_session', newSessionId, {
         httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 365, path: '/',
       })

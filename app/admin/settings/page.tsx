@@ -39,7 +39,7 @@ interface RowDef {
 
 const ROWS: RowDef[] = [
   { key: 'maintenanceMode', icon: '🔧', title: 'Maintenance mode', desc: 'Redirects the whole site to a maintenance page. Admin stays accessible.', color: '#fbbf24', danger: true },
-  { key: 'attackMode', icon: '🛡', title: 'Attack mode', desc: 'Strict per-IP rate limiting on all public endpoints (tracking, redeem, giveaways).', color: '#f87171', danger: true },
+  { key: 'attackMode', icon: '🛡', title: 'Attack mode', desc: 'Strict per-IP rate limiting + Cloudflare Turnstile CAPTCHA on all public endpoints.', color: '#f87171', danger: true },
   { key: 'redeemEnabled', icon: '🎁', title: 'Redeem system', desc: 'Allow visitors to redeem codes at /redeem.', color: '#4ade80' },
   { key: 'rafflesEnabled', icon: '🎲', title: 'Public giveaways', desc: 'Allow visitors to join giveaways at /raffles.', color: '#4ade80' },
   { key: 'trackingEnabled', icon: '📡', title: 'Visit tracking', desc: 'Collect analytics from visitors. Turning this off pauses the live map too.', color: '#4ade80' },
@@ -52,6 +52,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState('')
   const [msgSaved, setMsgSaved] = useState(false)
   const [toast, setToast] = useState('')
+  const [toastErr, setToastErr] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/settings')
@@ -59,6 +60,11 @@ export default function SettingsPage() {
       .then(d => { if (d?.settings) { setSettings(d.settings); setMessage(d.settings.maintenanceMessage ?? '') } })
       .catch(() => {})
   }, [router])
+
+  const showToast = (msg: string, err = false) => {
+    setToast(msg); setToastErr(err)
+    setTimeout(() => setToast(''), 2200)
+  }
 
   const patch = useCallback(async (p: Partial<SiteSettings>, label: string) => {
     setSaving(label)
@@ -69,10 +75,13 @@ export default function SettingsPage() {
       const data = await res.json()
       if (res.ok) {
         setSettings(data.settings)
-        setToast('✓ saved')
-        setTimeout(() => setToast(''), 1800)
+        showToast('✓ saved')
+      } else {
+        showToast(data.error ?? 'Failed to save', true)
       }
-    } catch {}
+    } catch {
+      showToast('Network error', true)
+    }
     setSaving(null)
   }, [])
 
@@ -81,6 +90,7 @@ export default function SettingsPage() {
   }
 
   const anyDangerOn = settings.maintenanceMode || settings.attackMode
+  const hasTurnstile = !!(process.env.NEXT_PUBLIC_CF_TURNSTILE_SITE_KEY)
 
   return (
     <div style={{ maxWidth: 620, margin: '0 auto' }}>
@@ -92,7 +102,7 @@ export default function SettingsPage() {
           </div>
         </div>
         {toast && (
-          <span style={{ ...S, fontSize: 12, color: '#4ade80', letterSpacing: '0.08em', animation: 'fadeInUp 0.25s ease' }}>{toast}</span>
+          <span style={{ ...S, fontSize: 12, color: toastErr ? '#f87171' : '#4ade80', letterSpacing: '0.08em', animation: 'fadeInUp 0.25s ease' }}>{toast}</span>
         )}
       </div>
 
@@ -106,8 +116,22 @@ export default function SettingsPage() {
           <span style={{ ...S, fontSize: 12, color: '#fbbf24', letterSpacing: '0.04em' }}>
             {settings.maintenanceMode && settings.attackMode ? 'Maintenance mode and attack mode are active.'
               : settings.maintenanceMode ? 'Maintenance mode is active — visitors see the maintenance page.'
-              : 'Attack mode is active — public endpoints are rate-limited.'}
+              : 'Attack mode is active — public endpoints are rate-limited and CAPTCHA-gated.'}
           </span>
+        </div>
+      )}
+
+      {/* Attack mode + Turnstile notice */}
+      {!hasTurnstile && (
+        <div style={{
+          ...S, fontSize: 12, marginBottom: 12, padding: '9px 14px',
+          background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.15)',
+          borderRadius: 8, color: 'rgba(251,191,36,0.6)', lineHeight: 1.5,
+        }}>
+          ⚡ <strong>Cloudflare Turnstile not configured.</strong> Set{' '}
+          <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 3 }}>NEXT_PUBLIC_CF_TURNSTILE_SITE_KEY</code> and{' '}
+          <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 3 }}>CF_TURNSTILE_SECRET_KEY</code>{' '}
+          in Vercel env vars to enable CAPTCHA in attack mode.
         </div>
       )}
 
@@ -134,7 +158,7 @@ export default function SettingsPage() {
                     }}>active</span>
                   )}
                 </div>
-                <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.32)', marginTop: 4, lineHeight: 1.5 }}>{row.desc}</div>
+                <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.35)', marginTop: 4, lineHeight: 1.5 }}>{row.desc}</div>
               </div>
               <Toggle
                 on={on}

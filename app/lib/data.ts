@@ -21,6 +21,8 @@ export interface Visit {
   sessionId?: string
   isNew?: boolean
   duration?: number // seconds, set by updateVisitDuration
+  isBot?: boolean
+  botReason?: string
 }
 
 export interface VisitsData {
@@ -62,6 +64,9 @@ export interface Stats {
   byOS: { os: string; count: number }[]
   sessions: SessionSummary[]
   recent: Visit[]
+  // Bot stats
+  botTotal?: number
+  humanTotal?: number
 }
 
 // ─── User-agent parser ────────────────────────────────────────────────────────
@@ -168,6 +173,9 @@ export async function updateVisitDuration(sessionId: string, _page: string, dura
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 export function computeStats(visits: Visit[]): Stats {
+  // Separate human vs bot traffic for accurate stats
+  const humanVisits = visits.filter(v => !v.isBot)
+
   const pageCount    = new Map<string, number>()
   const countryCount = new Map<string, { country: string; code: string; count: number }>()
   const ipSet        = new Set<string>()
@@ -180,8 +188,6 @@ export function computeStats(visits: Visit[]): Stats {
 
   const now = new Date()
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-  const oneDayAgo    = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  const twoDaysAgo   = new Date(now.getTime() - 48 * 60 * 60 * 1000)
   const oneHourAgo   = new Date(now.getTime() - 60 * 60 * 1000)
 
   const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0)
@@ -191,7 +197,8 @@ export function computeStats(visits: Visit[]): Stats {
   const todayIps = new Set<string>(), yIps = new Set<string>()
   const activeIps = new Set<string>()
 
-  for (const v of visits) {
+  // Only count human visits in stats
+  for (const v of humanVisits) {
     const ts = new Date(v.timestamp)
     pageCount.set(v.page, (pageCount.get(v.page) ?? 0) + 1)
     if (v.ip) {
@@ -221,7 +228,7 @@ export function computeStats(visits: Visit[]): Stats {
     if (v.os)      osCount.set(v.os,          (osCount.get(v.os)          ?? 0) + 1)
   }
 
-  // 7-day series
+  // 7-day series (human only)
   const byDay: { date: string; count: number }[] = []
   for (let i = 6; i >= 0; i--) {
     const d = new Date(now.getTime() - i * 86400000)
@@ -241,10 +248,10 @@ export function computeStats(visits: Visit[]): Stats {
   const byBrowser   = [...browserCount.entries()].map(([browser, count]) => ({ browser, count })).sort((a, b) => b.count - a.count)
   const byOS        = [...osCount.entries()].map(([os, count]) => ({ os, count })).sort((a, b) => b.count - a.count)
 
-  // Sessions
+  // Sessions (human only)
   const sessionMap = new Map<string, SessionSummary>()
   const sessionPageSets = new Map<string, Set<string>>()
-  for (const v of visits) {
+  for (const v of humanVisits) {
     const sid = v.sessionId ?? v.id
     if (!sessionMap.has(sid)) {
       sessionMap.set(sid, {
@@ -269,8 +276,11 @@ export function computeStats(visits: Visit[]): Stats {
 
   const pct = (a: number, b: number) => b === 0 ? (a > 0 ? 100 : 0) : Math.round((a - b) / b * 100)
 
+  const botTotal   = visits.filter(v => v.isBot).length
+  const humanTotal = humanVisits.length
+
   return {
-    total: visits.length,
+    total: humanTotal,  // total = only human traffic
     unique: ipSet.size,
     topPage: byPage[0]?.page ?? '/',
     topCountry: byCountry[0]?.country ?? '—',
@@ -283,5 +293,129 @@ export function computeStats(visits: Visit[]): Stats {
     byPage, byCountry, byDay, byDayHour, byReferrer, byDevice, byBrowser, byOS,
     sessions: sessions.slice(0, 50),
     recent: [...visits].reverse().slice(0, 20),
+    botTotal,
+    humanTotal,
   }
+}
+
+// ─── Bot detection ────────────────────────────────────────────────────────────
+//
+// Multi-signal detection: UA pattern matching + header analysis + behavioral signals.
+// Returns { isBot, reason, confidence } where confidence is 'definite' | 'likely' | 'possible'.
+
+const BOT_UA_PATTERNS: RegExp[] = [
+  // Search engine crawlers
+  /googlebot/i, /bingbot/i, /slurp/i, /duckduckbot/i, /baiduspider/i,
+  /yandexbot/i, /sogou/i, /exabot/i, /facebookexternalhit/i, /ia_archiver/i,
+  /mj12bot/i, /ahrefsbot/i, /semrushbot/i, /rogerbot/i, /dotbot/i,
+  /screaming.?frog/i, /applebot/i, /twitterbot/i, /linkedinbot/i,
+  /discordbot/i, /slackbot/i, /telegrambot/i, /whatsapp/i,
+  // Generic crawlers/scrapers
+  /\bcrawler\b/i, /\bspider\b/i, /\bscraper\b/i, /\bbot\b/i,
+  // HTTP clients / automation
+  /curl\//i, /wget\//i, /python-requests/i, /go-http-client/i,
+  /axios\//i, /node-fetch/i, /okhttp/i, /apache-httpclient/i,
+  /java\//i, /libwww-perl/i, /lwp-trivial/i, /httpclient/i,
+  /undici/i, /got\//i, /superagent/i, /request\//i,
+  // Headless / automation
+  /headlesschrome/i, /phantomjs/i, /selenium/i, /puppeteer/i,
+  /playwright/i, /cypress/i, /webdriver/i,
+  // Monitoring/uptime tools
+  /pingdom/i, /uptimerobot/i, /statuscake/i, /zabbix/i,
+  /newrelic/i, /datadog/i, /site24x7/i, /hetrixtools/i,
+  /monitor/i, /health.?check/i,
+  // AI crawlers
+  /gptbot/i, /chatgpt-user/i, /claude-web/i, /anthropic/i,
+  /cohere-ai/i, /perplexitybot/i, /youbot/i,
+]
+
+// Known legit UAs that look sus but aren't bots
+const ALLOW_LIST: RegExp[] = [
+  /facebookexternalhit\/1\.1 \(https?:\/\/www\.facebook\.com/i, // FB preview but real user
+]
+
+// Sec-ch-ua patterns indicating headless/automation
+const HEADLESS_SEC_CH_UA = /HeadlessChrome|Headless/i
+
+// Sec-fetch-site values that suggest scripted access (no real navigation)
+const BOT_FETCH_SITES = new Set(['none']) // 'none' alone without other signals = suspicious
+
+export function detectBot(
+  ua: string,
+  headers?: Headers
+): { isBot: boolean; reason?: string; confidence?: 'definite' | 'likely' | 'possible' } {
+  const u = ua.trim()
+
+  // 1. Empty or suspiciously short UA
+  if (!u || u.length < 8) {
+    return { isBot: true, reason: 'empty-ua', confidence: 'definite' }
+  }
+
+  // 2. Allowlist — known legitimate bots we want to pass through (rare)
+  for (const pattern of ALLOW_LIST) {
+    if (pattern.test(u)) return { isBot: false }
+  }
+
+  // 3. Known bot UA pattern
+  for (const pattern of BOT_UA_PATTERNS) {
+    if (pattern.test(u)) return { isBot: true, reason: 'bot-ua', confidence: 'definite' }
+  }
+
+  if (headers) {
+    // 4. Missing Accept-Language — real browsers always send this
+    const acceptLang = headers.get('accept-language')
+    if (!acceptLang) {
+      return { isBot: true, reason: 'no-accept-language', confidence: 'likely' }
+    }
+
+    // 5. Headless Chrome via sec-ch-ua
+    const secCh = headers.get('sec-ch-ua')
+    if (secCh && HEADLESS_SEC_CH_UA.test(secCh)) {
+      return { isBot: true, reason: 'headless-chrome', confidence: 'definite' }
+    }
+
+    // 6. Missing Accept header (real browsers always send it)
+    const accept = headers.get('accept')
+    if (!accept) {
+      return { isBot: true, reason: 'no-accept', confidence: 'likely' }
+    }
+
+    // 7. sec-fetch-mode = 'navigate' with sec-fetch-site = 'none' is normal for direct navigation.
+    // But if it's an API call with no sec-fetch headers at all (and UA looks real), flag as possible.
+    const secFetchMode = headers.get('sec-fetch-mode')
+    const secFetchSite = headers.get('sec-fetch-site')
+    const hasBrowserSec = !!(secFetchMode || secFetchSite || headers.get('sec-fetch-dest'))
+
+    // 8. Verify browser UA structure — must have Mozilla/5.0 + WebKit or Gecko engine
+    const hasMozilla = /Mozilla\/5\.0/i.test(u)
+    const hasEngine  = /AppleWebKit|Gecko|Trident/i.test(u)
+
+    if (!hasMozilla || !hasEngine) {
+      // Not a standard browser UA — but be lenient if it has Accept-Language
+      // (could be a custom app or extension)
+      if (acceptLang) {
+        return { isBot: true, reason: 'non-browser-ua', confidence: 'likely' }
+      }
+      return { isBot: true, reason: 'non-browser-ua', confidence: 'definite' }
+    }
+
+    // 9. Real browser clients from 2022+ always send sec-ch-ua family headers.
+    // If UA claims to be Chrome 90+ but no sec-ch-ua, it's spoofing.
+    const chromeVersionMatch = u.match(/Chrome\/(\d+)/i)
+    if (chromeVersionMatch) {
+      const majorVersion = parseInt(chromeVersionMatch[1], 10)
+      if (majorVersion >= 90 && !secCh && !hasBrowserSec) {
+        return { isBot: true, reason: 'chrome-spoofing', confidence: 'likely' }
+      }
+    }
+  } else {
+    // No headers provided — rely solely on UA
+    const hasMozilla = /Mozilla\/5\.0/i.test(u)
+    const hasEngine  = /AppleWebKit|Gecko|Trident/i.test(u)
+    if (!hasMozilla || !hasEngine) {
+      return { isBot: true, reason: 'non-browser-ua', confidence: 'likely' }
+    }
+  }
+
+  return { isBot: false }
 }

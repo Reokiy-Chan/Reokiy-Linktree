@@ -6,9 +6,17 @@ import { USE_KV, getRedis } from './redis'
 
 export function getRpConfig(): { rpID: string; origin: string } {
   if (process.env.NODE_ENV === 'production') {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://reokiy.com'
-    const { hostname, origin } = new URL(siteUrl)
-    return { rpID: hostname, origin }
+    // NEXT_PUBLIC_SITE_URL is the canonical URL (e.g. https://reokiy.vercel.app)
+    if (process.env.NEXT_PUBLIC_SITE_URL) {
+      const { hostname, origin } = new URL(process.env.NEXT_PUBLIC_SITE_URL)
+      return { rpID: hostname, origin }
+    }
+    // VERCEL_URL is auto-set by Vercel (no https prefix)
+    if (process.env.VERCEL_URL) {
+      return { rpID: process.env.VERCEL_URL, origin: `https://${process.env.VERCEL_URL}` }
+    }
+    // Last-resort fallback — set NEXT_PUBLIC_SITE_URL in Vercel to avoid this
+    return { rpID: 'reokiy.vercel.app', origin: 'https://reokiy.vercel.app' }
   }
   return { rpID: 'localhost', origin: 'http://localhost:3000' }
 }

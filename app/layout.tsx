@@ -4,6 +4,7 @@ import { ThemeProvider } from './components/ThemeProvider'
 import TypewriterTitle from './components/TypewriterTitle'
 import MusicPlayer from './components/MusicPlayer'
 import TrackingBeacon from './components/TrackingBeacon'
+import CaptchaGate from './components/CaptchaGate'
 
 export const metadata: Metadata = {
   title: {
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <TypewriterTitle />
           <TrackingBeacon />
+          <CaptchaGate />
           {children}
           <MusicPlayer />
         </ThemeProvider>
