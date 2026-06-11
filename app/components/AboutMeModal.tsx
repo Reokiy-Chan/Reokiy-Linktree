@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useCallback, useState } from 'react'
+import Image from 'next/image'
 
 const STICKER_CYCLE = [1, 2, 3, 4, 5, 6]
 
@@ -72,7 +73,7 @@ function TileLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       fontFamily: 'var(--font-body)',
-      fontSize: 8,
+      fontSize: 12,
       letterSpacing: '0.18em',
       textTransform: 'uppercase',
       color: 'rgba(var(--primary-rgb),0.7)',
@@ -151,7 +152,10 @@ export default function AboutMeModal({ open, onClose }: { open: boolean; onClose
 
       {/* Backdrop */}
       <div
+        role="button"
+        tabIndex={0}
         onClick={onClose}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClose() }}
         style={{
           position: 'fixed', inset: 0, zIndex: 3000,
           background: 'rgba(2,0,5,0.82)',
@@ -183,12 +187,15 @@ export default function AboutMeModal({ open, onClose }: { open: boolean; onClose
           {/* Sticker row + title */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {STICKER_CYCLE.map((v, i) => (
-              <img
+              <Image
                 key={v}
                 src={`/emojis/reokichan 28 ${v}.png`}
                 alt=""
+                width={22}
+                height={22}
+                unoptimized
                 style={{
-                  width: 22, height: 22, objectFit: 'contain',
+                  objectFit: 'contain',
                   opacity: stickerIdx === i ? 1 : 0.2,
                   transform: stickerIdx === i ? 'scale(1.4) translateY(-2px)' : 'scale(1)',
                   transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
@@ -206,7 +213,7 @@ export default function AboutMeModal({ open, onClose }: { open: boolean; onClose
           </div>
 
           {/* Close */}
-          <button
+          <button type="button"
             onClick={onClose}
             style={{
               background: 'rgba(255,255,255,0.06)',
@@ -214,7 +221,7 @@ export default function AboutMeModal({ open, onClose }: { open: boolean; onClose
               borderRadius: 10, width: 32, height: 32,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', color: 'rgba(255,255,255,0.5)',
-              transition: 'all 0.15s',
+              transition: 'background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s, transform 0.15s',
               flexShrink: 0,
             }}
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = '#fff' }}
@@ -252,14 +259,15 @@ export default function AboutMeModal({ open, onClose }: { open: boolean; onClose
                   border: '1.5px solid rgba(var(--primary-rgb),0.35)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   overflow: 'hidden',
+                  position: 'relative',
                 }}>
-                  <img src="/images/logo.png" alt="reokiy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image src="/images/logo.png" alt="reokiy" fill unoptimized style={{ objectFit: 'cover' }} />
                 </div>
                 <div>
                   <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 22, color: 'var(--text)', lineHeight: 1 }}>
                     Reokiy
                   </div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: 4 }}>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: 4 }}>
                     also known as Lucy • 21+
                   </div>
                 </div>
@@ -276,7 +284,7 @@ export default function AboutMeModal({ open, onClose }: { open: boolean; onClose
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {['lewd elf ♥', 'vrchat', '18+', 'unity dev', 'dumb & cute'].map(t => (
                   <span key={t} style={{
-                    fontFamily: 'var(--font-body)', fontSize: 9, letterSpacing: '0.07em',
+                    fontFamily: 'var(--font-body)', fontSize: 12, letterSpacing: '0.07em',
                     padding: '4px 10px', borderRadius: 999,
                     background: 'rgba(var(--primary-rgb),0.1)',
                     border: '1px solid rgba(var(--primary-rgb),0.28)',
@@ -305,8 +313,8 @@ export default function AboutMeModal({ open, onClose }: { open: boolean; onClose
                 >
                   <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{g.emoji}</span>
                   <div>
-                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text)', letterSpacing: '0.04em' }}>{g.name}</div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 11, color: 'var(--text-muted)' }}>{g.note}</div>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text)', letterSpacing: '0.04em' }}>{g.name}</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 12, color: 'var(--text-muted)' }}>{g.note}</div>
                   </div>
                 </div>
               ))}
@@ -326,7 +334,7 @@ export default function AboutMeModal({ open, onClose }: { open: boolean; onClose
                   borderRadius: 12, textAlign: 'center',
                 }}>
                   <span style={{ fontSize: 22 }}>{w.icon}</span>
-                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>{w.label}</span>
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>{w.label}</span>
                 </div>
               ))}
             </div>
@@ -341,12 +349,12 @@ export default function AboutMeModal({ open, onClose }: { open: boolean; onClose
                   key={f}
                   className="fact-chip"
                   style={{
-                    fontFamily: 'var(--font-body)', fontSize: 9, letterSpacing: '0.06em',
+                    fontFamily: 'var(--font-body)', fontSize: 12, letterSpacing: '0.06em',
                     padding: '5px 11px', borderRadius: 999,
                     background: 'rgba(255,255,255,0.04)',
                     border: '1px solid rgba(255,255,255,0.09)',
                     color: 'var(--text-muted)',
-                    cursor: 'default', transition: 'all 0.15s',
+                    cursor: 'default', transition: 'background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s, transform 0.15s',
                   }}
                 >
                   {f}
@@ -360,14 +368,14 @@ export default function AboutMeModal({ open, onClose }: { open: boolean; onClose
             <TileLabel>my story</TileLabel>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {TIMELINE.map((t, i) => (
-                <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div key={t.year} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, paddingTop: 2 }}>
                     <div style={{
                       width: 28, height: 28, borderRadius: '50%',
                       background: 'rgba(var(--primary-rgb),0.12)',
                       border: '1px solid rgba(var(--primary-rgb),0.3)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: 'var(--font-body)', fontSize: 7,
+                      fontFamily: 'var(--font-body)', fontSize: 12,
                       color: 'var(--pink)', letterSpacing: '0.03em',
                     }}>
                       {t.year}

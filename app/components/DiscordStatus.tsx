@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useDiscord } from '../hooks/useDiscord'
 
 const statusColors: Record<string, string> = {
@@ -25,7 +26,7 @@ export default function DiscordStatus() {
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '8px 14px', background: 'rgba(255,255,255,0.04)',
         borderRadius: 999, border: '1px solid var(--glass-border)',
-        fontSize: 11, color: 'var(--text-muted)',
+        fontSize: 12, color: 'var(--text-muted)',
         fontFamily: 'var(--font-body)', letterSpacing: '0.05em',
       }}>
         <span style={{
@@ -43,7 +44,7 @@ export default function DiscordStatus() {
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '8px 14px', background: 'rgba(255,255,255,0.04)',
         borderRadius: 999, border: '1px solid var(--glass-border)',
-        fontSize: 11, color: 'var(--text-muted)',
+        fontSize: 12, color: 'var(--text-muted)',
         fontFamily: 'var(--font-body)', letterSpacing: '0.05em',
       }}>
         <span style={{
@@ -68,10 +69,13 @@ export default function DiscordStatus() {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {data.discord_user.avatar && (
-          <img
+          <Image
             src={`https://cdn.discordapp.com/avatars/${data.discord_user.id}/${data.discord_user.avatar}.png?size=32`}
             alt="avatar"
-            style={{ width: 28, height: 28, borderRadius: '50%', border: `2px solid ${statusColors[status]}`, flexShrink: 0 }}
+            width={28}
+            height={28}
+            unoptimized
+            style={{ borderRadius: '50%', border: `2px solid ${statusColors[status]}`, flexShrink: 0 }}
           />
         )}
         <div>
@@ -84,7 +88,7 @@ export default function DiscordStatus() {
               background: statusColors[status], display: 'inline-block',
               boxShadow: `0 0 6px ${statusColors[status]}`,
             }} />
-            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', letterSpacing: '0.05em' }}>
               {statusLabels[status]}
             </span>
           </div>
@@ -92,7 +96,7 @@ export default function DiscordStatus() {
       </div>
       {activity && (
         <div style={{
-          fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-body)',
+          fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-body)',
           letterSpacing: '0.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {activity}

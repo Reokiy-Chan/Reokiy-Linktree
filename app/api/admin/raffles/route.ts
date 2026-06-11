@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateSession } from '@/app/lib/auth'
+import { getSession } from '@/app/lib/auth'
 import { listRaffles, createRaffle } from '@/app/lib/raffles'
 import type { RafflePrize } from '@/app/lib/raffles'
+import { appendAudit } from '@/app/lib/audit'
 
 export async function GET(req: NextRequest) {
-  if (!await validateSession(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getSession(req)
+  if (!session || session.setup) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const all = await listRaffles()
   return NextResponse.json({ raffles: all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) })
 }
 
 export async function POST(req: NextRequest) {
-  if (!await validateSession(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getSession(req)
+  if (!session || session.setup) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   if (!body?.title) return NextResponse.json({ error: 'Title required' }, { status: 400 })
 
@@ -26,5 +29,10 @@ export async function POST(req: NextRequest) {
     winnerId: undefined,
     pickedAt: undefined,
   })
+  await appendAudit({
+    action: 'raffle.create',
+    actorId: session.uid, actorName: session.u, actorUsername: session.u,
+    target: raffle.title,
+  }).catch(() => {})
   return NextResponse.json({ raffle })
 }

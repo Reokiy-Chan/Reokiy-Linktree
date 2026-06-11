@@ -2,6 +2,58 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 
+const TOAST_CONTENT: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 12,
+  padding: '10px 16px 10px 12px',
+  background: 'rgba(255,255,255,0.08)',
+  backdropFilter: 'blur(48px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(48px) saturate(180%)',
+  border: '1px solid rgba(255,255,255,0.16)',
+  borderRadius: 16,
+  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2), 0 8px 32px rgba(0,0,0,0.45)',
+  minWidth: 200, maxWidth: 280,
+}
+const VINYL_DISC: React.CSSProperties = {
+  width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+  background: 'radial-gradient(circle at 38% 38%, rgba(var(--primary-rgb),0.7) 0%, #0d0009 60%)',
+  border: '2px solid rgba(255,255,255,0.12)',
+  animation: 'vinyl-spin 3s linear infinite',
+  boxShadow: 'inset 0 0 0 8px rgba(0,0,0,0.25)',
+}
+const ARTIST_TEXT: React.CSSProperties = {
+  fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.38)',
+  letterSpacing: '0.05em', marginTop: 2,
+  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+}
+const AUTOPLAY_HINT: React.CSSProperties = {
+  position: 'fixed', bottom: 64, right: 20, zIndex: 999,
+  fontFamily: 'var(--font-body)', fontSize: 12, letterSpacing: '0.1em',
+  color: 'rgba(255,255,255,0.55)', cursor: 'pointer',
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.12)',
+  borderRadius: 8, padding: '5px 10px',
+  animation: 'tp-in 0.4s ease forwards',
+}
+const PLAYER_CONTROLS: React.CSSProperties = {
+  position: 'fixed', bottom: 20, right: 20, zIndex: 1000,
+  display: 'flex', alignItems: 'center', gap: 2,
+  padding: '8px 10px',
+  background: 'rgba(255,255,255,0.07)',
+  backdropFilter: 'blur(40px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+  border: '1px solid rgba(255,255,255,0.13)',
+  borderRadius: 14,
+  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18),inset 0 -1px 0 rgba(0,0,0,0.12),0 8px 32px rgba(0,0,0,0.5)',
+}
+const CTRL_BTN: React.CSSProperties = {
+  width: 30, height: 30, borderRadius: 8, border: 'none',
+  background: 'transparent', cursor: 'pointer',
+  color: 'rgba(255,255,255,0.65)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  transition: 'background 0.15s, color 0.15s',
+  flexShrink: 0,
+}
+
 function parseTrack(filename: string): { song: string; artist: string } {
   const base = filename.replace(/\.[^.]+$/, '')
   const parts = base.split('▸').map(s => s.trim())
@@ -23,34 +75,18 @@ function NowPlayingToast({ song, artist, visible, leaving }: {
         ? 'tp-out 0.4s ease forwards'
         : 'tp-in 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards',
     }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '10px 16px 10px 12px',
-        background: 'rgba(255,255,255,0.08)',
-        backdropFilter: 'blur(48px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(48px) saturate(180%)',
-        border: '1px solid rgba(255,255,255,0.16)',
-        borderRadius: 16,
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2), 0 8px 32px rgba(0,0,0,0.45)',
-        minWidth: 200, maxWidth: 280,
-      }}>
+      <div style={TOAST_CONTENT}>
         {/* spinning disc */}
-        <div style={{
-          width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-          background: 'radial-gradient(circle at 38% 38%, rgba(var(--primary-rgb),0.7) 0%, #0d0009 60%)',
-          border: '2px solid rgba(255,255,255,0.12)',
-          animation: 'vinyl-spin 3s linear infinite',
-          boxShadow: 'inset 0 0 0 8px rgba(0,0,0,0.25)',
-        }} />
+        <div style={VINYL_DISC} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 3 }}>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 3 }}>
             now playing
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 13, color: 'rgba(255,255,255,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {song}
           </div>
           {artist && (
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(255,255,255,0.38)', letterSpacing: '0.05em', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={ARTIST_TEXT}>
               {artist}
             </div>
           )}
@@ -224,37 +260,18 @@ export default function MusicPlayer() {
       {/* Hint de autoplay bloqueado — click en cualquier parte desbloquea también */}
       {autoBlocked && (
         <div
+          role="button"
+          tabIndex={0}
           onClick={togglePlay}
-          style={{
-            position: 'fixed', bottom: 64, right: 20, zIndex: 999,
-            fontFamily: 'var(--font-body)', fontSize: 9, letterSpacing: '0.1em',
-            color: 'rgba(255,255,255,0.55)', cursor: 'pointer',
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 8, padding: '5px 10px',
-            animation: 'tp-in 0.4s ease forwards',
-          }}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') togglePlay() }}
+          style={AUTOPLAY_HINT}
         >
           🎵 click to play
         </div>
       )}
 
       {/* Corner controls — bottom right */}
-      <div style={{
-        position: 'fixed', bottom: 20, right: 20, zIndex: 1000,
-        display: 'flex', alignItems: 'center', gap: 2,
-        padding: '8px 10px',
-        background: 'rgba(255,255,255,0.07)',
-        backdropFilter: 'blur(40px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-        border: '1px solid rgba(255,255,255,0.13)',
-        borderRadius: 14,
-        boxShadow: [
-          'inset 0 1px 0 rgba(255,255,255,0.18)',
-          'inset 0 -1px 0 rgba(0,0,0,0.12)',
-          '0 8px 32px rgba(0,0,0,0.5)',
-        ].join(','),
-      }}>
+      <div style={PLAYER_CONTROLS}>
         {/* Prev */}
         <Btn onClick={prev} title="Anterior">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
@@ -278,7 +295,10 @@ export default function MusicPlayer() {
 
         {/* Vertical volume bar */}
         <div
+          role="button"
+          tabIndex={0}
           onClick={handleVolClick}
+          onKeyDown={e => { if (e.key === 'ArrowUp') setVolume(v => Math.min(1, v + 0.1)); if (e.key === 'ArrowDown') setVolume(v => Math.max(0, v - 0.1)) }}
           title={`Volumen ${Math.round(volume * 100)}%`}
           style={{
             width: 4, height: 32, borderRadius: 4,
@@ -301,17 +321,10 @@ export default function MusicPlayer() {
 
 function Btn({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       title={title}
-      style={{
-        width: 30, height: 30, borderRadius: 8, border: 'none',
-        background: 'transparent', cursor: 'pointer',
-        color: 'rgba(255,255,255,0.65)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: 'background 0.15s, color 0.15s',
-        flexShrink: 0,
-      }}
+      style={CTRL_BTN}
       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.65)' }}
     >

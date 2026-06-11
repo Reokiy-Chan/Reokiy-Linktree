@@ -96,8 +96,7 @@ export async function listCodes(): Promise<RedeemCode[]> {
     const raw = await kv.hgetall(KV_KEY)
     if (!raw) return []
     return Object.values(raw)
-      .map(v => safeParse<RedeemCode>(v))
-      .filter(Boolean) as RedeemCode[]
+      .flatMap(v => { const r = safeParse<RedeemCode>(v); return r ? [r] : [] })
   }
   return fsRead()
 }

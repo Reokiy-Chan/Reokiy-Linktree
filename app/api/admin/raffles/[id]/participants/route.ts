@@ -3,9 +3,8 @@ import { validateSession } from '@/app/lib/auth'
 import { addParticipant, removeParticipant } from '@/app/lib/raffles'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!await validateSession(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { id } = await params
-  const body = await req.json().catch(() => ({}))
+  const [valid, { id }, body] = await Promise.all([validateSession(req), params, req.json().catch(() => ({}))])
+  if (!valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { discordUsername } = body
   if (!discordUsername?.trim()) return NextResponse.json({ error: 'discordUsername required' }, { status: 400 })
   const result = await addParticipant(id, discordUsername.trim())
@@ -14,9 +13,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!await validateSession(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { id } = await params
-  const body = await req.json().catch(() => ({}))
+  const [valid, { id }, body] = await Promise.all([validateSession(req), params, req.json().catch(() => ({}))])
+  if (!valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { discordUsername } = body
   if (!discordUsername?.trim()) return NextResponse.json({ error: 'discordUsername required' }, { status: 400 })
   const result = await removeParticipant(id, discordUsername.trim())

@@ -28,14 +28,14 @@ export async function verifyPassword(plain: string, hash: string): Promise<{ ok:
 
 
 
-export function createToken(secret: string): string {
+function createToken(secret: string): string {
   const payload = `admin:${Date.now()}:${Math.random().toString(36).slice(2)}`
   const payloadB64 = Buffer.from(payload).toString('base64url')
   const sig = createHmac('sha256', secret).update(payloadB64).digest('hex')
   return `${payloadB64}.${sig}`
 }
 
-export function verifyToken(token: string, secret: string): boolean {
+function verifyToken(token: string, secret: string): boolean {
   try {
     const [payloadB64, sig] = token.split('.')
     if (!payloadB64 || !sig) return false
@@ -69,7 +69,7 @@ export function createSessionToken(payload: Omit<SessionPayload, 'iat'>, secret:
   return `${payloadB64}.${sig}`
 }
 
-export function readSessionToken(token: string | undefined, secret: string): SessionPayload | null {
+function readSessionToken(token: string | undefined, secret: string): SessionPayload | null {
   if (!token) return null
   if (!verifyToken(token, secret)) return null
   try {

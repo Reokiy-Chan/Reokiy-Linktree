@@ -243,6 +243,7 @@ export function computeStats(visits: Visit[]): Stats {
 
   // Sessions
   const sessionMap = new Map<string, SessionSummary>()
+  const sessionPageSets = new Map<string, Set<string>>()
   for (const v of visits) {
     const sid = v.sessionId ?? v.id
     if (!sessionMap.has(sid)) {
@@ -252,9 +253,11 @@ export function computeStats(visits: Visit[]): Stats {
         os: v.os ?? 'Other', country: v.country ?? '—', city: v.city,
         isNew: v.isNew ?? true, firstSeen: v.timestamp,
       })
+      sessionPageSets.set(sid, new Set())
     }
     const s = sessionMap.get(sid)!
-    if (!s.pages.includes(v.page)) s.pages.push(v.page)
+    const pSet = sessionPageSets.get(sid)!
+    if (!pSet.has(v.page)) { pSet.add(v.page); s.pages.push(v.page) }
     if (v.duration && v.duration > s.duration) s.duration = v.duration
   }
 

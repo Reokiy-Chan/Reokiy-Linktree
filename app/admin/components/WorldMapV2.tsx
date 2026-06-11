@@ -49,7 +49,7 @@ function MapBtn({ onClick, title, active, children }: {
   onClick: () => void; title?: string; active?: boolean; children: React.ReactNode
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       title={title}
       style={{
@@ -58,9 +58,9 @@ function MapBtn({ onClick, title, active, children }: {
         background: active ? 'rgba(196,20,40,0.22)' : 'rgba(5,0,7,0.8)',
         color: active ? '#fee0f4' : 'rgba(254,240,244,0.6)',
         cursor: 'pointer', fontFamily: 'var(--font-body)',
-        fontSize: 11, padding: '0 6px',
+        fontSize: 12, padding: '0 6px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        lineHeight: 1, transition: 'all 0.15s', whiteSpace: 'nowrap',
+        lineHeight: 1, transition: 'background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s, transform 0.15s', whiteSpace: 'nowrap',
       }}
     >{children}</button>
   )
@@ -585,15 +585,15 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
   return (
     <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(196,20,40,0.22)', background: '#050007', marginBottom: 14 }}>
       {/* Header */}
-      <div style={{ position: 'absolute', top: 12, left: 16, zIndex: 3, fontFamily: 'var(--font-body)', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.75)' }}>
+      <div style={{ position: 'absolute', top: 12, left: 16, zIndex: 3, fontFamily: 'var(--font-body)', fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.75)' }}>
         live requests
       </div>
 
       {/* Status row */}
       <div style={{ position: 'absolute', top: 10, right: 16, zIndex: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
-        {!geoReady && <span style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(254,240,244,0.25)', letterSpacing: '0.1em' }}>loading map…</span>}
+        {!geoReady && <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(254,240,244,0.25)', letterSpacing: '0.1em' }}>loading map…</span>}
         <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#c41428', boxShadow: '0 0 6px #c41428', animation: 'pulse-dot 2s ease-in-out infinite' }} />
-        <span style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.1em' }}>LIVE</span>
+        <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.1em' }}>LIVE</span>
       </div>
 
       {/* Controls row — bottom */}
@@ -643,9 +643,9 @@ export default function WorldMapV2({ height = 280, showControls = false, maxArcs
             fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
             boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
           }}>
-            <div style={{ fontSize: 10, color: 'var(--text)', marginBottom: 2 }}>{tooltip.label}</div>
-            <div style={{ fontSize: 9, color: 'var(--primary)' }}>{tooltip.page}</div>
-            <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>{tooltip.time}</div>
+            <div style={{ fontSize: 12, color: 'var(--text)', marginBottom: 2 }}>{tooltip.label}</div>
+            <div style={{ fontSize: 12, color: 'var(--primary)' }}>{tooltip.page}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{tooltip.time}</div>
           </div>
         )}
       </div>

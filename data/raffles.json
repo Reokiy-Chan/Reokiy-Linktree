@@ -43,9 +43,9 @@
         "description": "test"
       }
     ],
-    "endsAt": "2026-07-15T09:11:00.000Z",
+    "endsAt": "2026-07-15T07:11:00.000Z",
     "autoEnd": true,
-    "maxWinners": 1,
+    "maxWinners": 2,
     "bannedUsernames": [],
     "winners": [
       {
@@ -66,5 +66,47 @@
     "createdAt": "2026-06-10T21:58:20.859Z",
     "winnerId": "testt",
     "pickedAt": "2026-06-11T09:16:09.178Z"
+  },
+  {
+    "title": "tet",
+    "description": "eetete",
+    "prizes": [
+      {
+        "id": "ee55e347-a2bd-49d7-9493-055295e5213d",
+        "label": "etet",
+        "description": "etet"
+      }
+    ],
+    "endsAt": "3333-03-31T01:03:00.000Z",
+    "autoEnd": false,
+    "maxWinners": 1,
+    "bannedUsernames": [],
+    "winners": [
+      {
+        "discordUsername": "reokiy",
+        "pickedAt": "2026-06-11T16:28:05.236Z",
+        "prizeId": "ee55e347-a2bd-49d7-9493-055295e5213d",
+        "prizeLabel": "etet"
+      }
+    ],
+    "id": "89b3ba5c-f98b-4647-8ac6-4fed4dd22b68",
+    "entries": [
+      {
+        "discordUsername": "3333",
+        "enteredAt": "2026-06-11T16:27:45.010Z"
+      },
+      {
+        "discordUsername": "reokiy",
+        "enteredAt": "2026-06-11T16:27:50.411Z"
+      },
+      {
+        "discordUsername": "silvy",
+        "enteredAt": "2026-06-11T16:27:54.814Z"
+      }
+    ],
+    "status": "ended",
+    "createdAt": "2026-06-11T16:27:14.860Z",
+    "winnerId": "reokiy",
+    "pickedAt": "2026-06-11T16:28:05.236Z"
   }
 ]

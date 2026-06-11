@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import Image from 'next/image'
 
 interface CarouselProps {
   autoPlay?: boolean
@@ -78,16 +79,15 @@ export default function Carousel({ autoPlay = true, interval = 4000 }: CarouselP
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <img
+        <Image
           key={current}
           className="carousel-img"
           src={`/images/carrousel/${encodeURIComponent(images[current])}`}
           alt={`Gallery image ${current + 1}`}
-          loading="lazy"
+          fill
+          unoptimized
           style={{
-            width: '100%', height: '100%',
             objectFit: 'cover', objectPosition: 'center',
-            display: 'block',
           }}
         />
 
@@ -101,7 +101,7 @@ export default function Carousel({ autoPlay = true, interval = 4000 }: CarouselP
         {/* Arrow buttons */}
         {images.length > 1 && (
           <>
-            <button
+            <button type="button"
               className="carousel-arrow"
               onClick={prev}
               aria-label="Previous"
@@ -115,7 +115,7 @@ export default function Carousel({ autoPlay = true, interval = 4000 }: CarouselP
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
-            <button
+            <button type="button"
               className="carousel-arrow"
               onClick={next}
               aria-label="Next"
@@ -135,7 +135,7 @@ export default function Carousel({ autoPlay = true, interval = 4000 }: CarouselP
         {/* Counter badge */}
         <div style={{
           position: 'absolute', bottom: 12, right: 14,
-          fontFamily: 'var(--font-body)', fontSize: 9,
+          fontFamily: 'var(--font-body)', fontSize: 12,
           color: 'rgba(254,240,244,0.6)',
           letterSpacing: '0.1em',
         }}>
@@ -149,9 +149,9 @@ export default function Carousel({ autoPlay = true, interval = 4000 }: CarouselP
           display: 'flex', justifyContent: 'center', alignItems: 'center',
           gap: 6, padding: '12px 20px',
         }}>
-          {images.map((_, i) => (
-            <button
-              key={i}
+          {images.map((img, i) => (
+            <button type="button"
+              key={img}
               className="carousel-dot"
               onClick={() => goTo(i)}
               aria-label={`Go to image ${i + 1}`}

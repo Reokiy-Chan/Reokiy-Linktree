@@ -6,14 +6,14 @@ import { hashPassword, verifyPassword } from './auth'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export const SECTIONS = ['overview', 'live', 'traffic', 'sessions', 'codes', 'giveaways', 'settings', 'users'] as const
-export type Section = typeof SECTIONS[number]
+export const PERMISSIONS = ['admin', 'owner'] as const
+export type Permission = typeof PERMISSIONS[number]
 
-export const ACTION_PERMISSIONS = ['HandleUsers', 'HandleUserActions'] as const
-export type ActionPermission = typeof ACTION_PERMISSIONS[number]
-
-export const ALL_PERMISSIONS = [...SECTIONS, ...ACTION_PERMISSIONS] as const
-export type Permission = typeof ALL_PERMISSIONS[number]
+// Kept for import compatibility — points to the new list
+export const SECTIONS = PERMISSIONS
+export type Section = Permission
+export const ALL_PERMISSIONS = PERMISSIONS
+export const ACTION_PERMISSIONS: readonly Permission[] = []
 
 export interface WebAuthnCredential {
   id: string           // base64url — es el credentialID del autenticador
@@ -22,6 +22,12 @@ export interface WebAuthnCredential {
   transports?: string[]
   name: string         // nombre amigable, e.g. "Flipper Zero"
   createdAt: string
+}
+
+export interface PendingMessage {
+  text: string
+  from: string
+  at: string
 }
 
 export interface AdminUser {
@@ -34,17 +40,17 @@ export interface AdminUser {
   otpHash?: string            // one-time password for first login (hashed)
   authMethod: 'password' | 'key' | 'webauthn'   // how they finished setup
   pendingSetup: boolean       // true until they set a password / key
-  permissions: Permission[]   // granted sections + action permissions (root implicitly has all)
+  permissions: Permission[]   // 'admin' | 'owner' (root implicitly has all)
   isRoot?: boolean
+  suspended?: boolean         // blocks login when true
+  pendingMessage?: PendingMessage  // message shown in their panel on next load
   createdAt: string
   createdBy?: string
   lastLogin?: string
-  webauthnCredentials?: {
-    id: string
-    name: string
-    createdAt: string
-    transports?: string[]
-  }[]
+  webauthnCredentials?: WebAuthnCredential[]
+  pronouns?: string
+  bio?: string
+  bannerUrl?: string
 }
 
 // What the client receives (never leak hashes)
@@ -57,6 +63,8 @@ export interface SafeUser {
   pendingSetup: boolean
   permissions: Permission[]
   isRoot?: boolean
+  suspended?: boolean
+  pendingMessage?: PendingMessage
   createdAt: string
   lastLogin?: string
   webauthnCredentials?: {
@@ -65,6 +73,9 @@ export interface SafeUser {
     createdAt: string
     transports?: string[]
   }[]
+  pronouns?: string
+  bio?: string
+  bannerUrl?: string
 }
 
 export function toSafeUser(u: AdminUser): SafeUser {
@@ -72,10 +83,15 @@ export function toSafeUser(u: AdminUser): SafeUser {
     id: u.id, username: u.username, name: u.name, avatar: u.avatar,
     authMethod: u.authMethod, pendingSetup: u.pendingSetup,
     permissions: u.permissions, isRoot: u.isRoot,
+    suspended: u.suspended,
+    pendingMessage: u.pendingMessage,
     createdAt: u.createdAt, lastLogin: u.lastLogin,
     webauthnCredentials: u.webauthnCredentials?.map(c => ({
       id: c.id, name: c.name, createdAt: c.createdAt, transports: c.transports,
     })),
+    pronouns: u.pronouns,
+    bio: u.bio,
+    bannerUrl: u.bannerUrl,
   }
 }
 
@@ -112,7 +128,7 @@ async function readAll(): Promise<AdminUser[]> {
     const kv = await getRedis()
     const raw = await kv.hgetall(KV_KEY)
     if (!raw) return []
-    return Object.values(raw).map(v => safeParse<AdminUser>(v)).filter(Boolean) as AdminUser[]
+    return Object.values(raw).flatMap(v => { const r = safeParse<AdminUser>(v); return r ? [r] : [] })
   }
   return fsRead()
 }
@@ -157,7 +173,7 @@ export async function ensureRoot(): Promise<AdminUser> {
   if (!root) {
     root = {
       id: ROOT_ID, username: 'root', name: 'Root', authMethod: 'password',
-      pendingSetup: false, permissions: [...ALL_PERMISSIONS] as Permission[], isRoot: true,
+      pendingSetup: false, permissions: ['owner'] as Permission[], isRoot: true,
       createdAt: new Date().toISOString(),
     }
     await writeOne(root)
@@ -299,6 +315,8 @@ export async function resolveLogin(
   const user = await getUserByUsername(uname)
   if (!user) return { ok: false, error: 'Invalid credentials' }
 
+  if (user.suspended) return { ok: false, error: 'Account suspended' }
+
   // --- Usuario en setup (solo OTP) ---
   if (user.pendingSetup) {
     if (method !== 'password' || !user.otpHash) {
@@ -409,9 +427,7 @@ export async function removeWebAuthnCredential(userId: string, credId: string): 
 
 /** Busca un usuario que tenga una credencial con ese credentialID. */
 export async function findUserByCredentialId(credId: string): Promise<AdminUser | null> {
-  const all = await listUsers()
-  // Incluir root
-  const root = await ensureRoot()
+  const [all, root] = await Promise.all([listUsers(), ensureRoot()])
   for (const u of [root, ...all]) {
     if (u.webauthnCredentials?.some(c => c.id === credId)) return u
   }

@@ -101,21 +101,12 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
 
-    // User management is root-only
-    if (pathname.startsWith('/admin/users') && payload.r !== 'root') {
-      return NextResponse.redirect(new URL('/admin', request.url))
-    }
-
-    // Per-section gating
-    if (payload.r !== 'root' && Array.isArray(payload.p)) {
-      const SECTION_PATHS: [string, string][] = [
-        ['/admin/live', 'live'], ['/admin/traffic', 'traffic'],
-        ['/admin/sessions', 'sessions'], ['/admin/codes', 'codes'],
-        ['/admin/raffles', 'giveaways'], ['/admin/settings', 'settings'],
-      ]
-      const match = SECTION_PATHS.find(([p]) => pathname.startsWith(p))
-      if (match && !payload.p.includes(match[1])) {
-        return NextResponse.redirect(new URL('/admin', request.url))
+    // Permission gate: non-root users must have 'admin' or 'owner'
+    if (payload.r !== 'root') {
+      const perms = Array.isArray(payload.p) ? payload.p : []
+      const hasAccess = perms.includes('admin') || perms.includes('owner')
+      if (!hasAccess) {
+        return NextResponse.redirect(new URL('/admin/login', request.url))
       }
     }
   }

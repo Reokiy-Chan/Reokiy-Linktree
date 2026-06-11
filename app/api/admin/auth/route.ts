@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSessionToken } from '@/app/lib/auth'
 import { resolveLogin, touchLastLogin, type AdminUser } from '@/app/lib/users'
+import { appendAudit } from '@/app/lib/audit'
 
 export const runtime = 'nodejs'
 
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
 
     if (!result.ok) {
       await new Promise(r => setTimeout(r, 800)) // slow down brute force
+      appendAudit({ action: 'login.fail', actorId: 'unknown', actorName: 'unknown', actorUsername: username, detail: result.error }).catch(() => {})
       return NextResponse.json({ error: result.error }, { status: 401 })
     }
 
@@ -49,6 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     await touchLastLogin(result.user.id)
+    appendAudit({ action: 'login.success', actorId: result.user.id, actorName: result.user.name, actorUsername: result.user.username }).catch(() => {})
     const response = NextResponse.json({ ok: true })
     response.cookies.set(COOKIE_NAME, sessionCookie(result.user, secret), {
       httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production',

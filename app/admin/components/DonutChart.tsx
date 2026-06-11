@@ -48,7 +48,7 @@ export default function DonutChart({ slices, size = 120, thickness = 14, centerL
           <span style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 20, color: 'var(--text)', lineHeight: 1 }}>
             {centerLabel.value}
           </span>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: 7, color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: 3 }}>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: 3 }}>
             {centerLabel.sub}
           </span>
         </div>

@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation'
 import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import type { Stats, SessionSummary } from '@/app/lib/data'
 
-const TT = { background: 'rgba(5,0,7,0.97)', border: '1px solid rgba(196,20,40,0.35)', borderRadius: 8, fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#fee0f4', padding: '6px 10px' }
+const TT = { background: 'rgba(5,0,7,0.97)', border: '1px solid rgba(196,20,40,0.35)', borderRadius: 8, fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#fee0f4', padding: '6px 10px' }
 const S: React.CSSProperties = { fontFamily: 'var(--font-body)' }
 
 function Sec({ title, children, style }: { title: string; children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(196,20,40,0.15)', borderRadius: 12, padding: '18px 20px', marginBottom: 14, ...style }}>
-      <div style={{ ...S, fontSize: 8, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', marginBottom: 16 }}>{title}</div>
+      <div style={{ ...S, fontSize: 12, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', marginBottom: 16 }}>{title}</div>
       {children}
     </div>
   )
@@ -44,7 +44,7 @@ function BounceGauge({ rate }: { rate: number }) {
         <text x={cx + r - 10} y={cy + 14} fill="rgba(254,240,244,0.3)" fontSize={8} fontFamily="Space Mono, monospace">100%</text>
       </svg>
       <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 32, color, lineHeight: 1, marginTop: -10 }}>{rate}%</div>
-      <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', marginTop: 4 }}>
+      <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)', marginTop: 4 }}>
         {rate < 40 ? '✓ low' : rate < 70 ? '~ medium' : '↑ high'}
       </div>
     </div>
@@ -57,7 +57,7 @@ function MiniDonut({ data, title }: { data: { name: string; value: number }[]; t
   const total = data.reduce((s, d) => s + d.value, 0)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <div style={{ ...S, fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', marginBottom: 8 }}>{title}</div>
+      <div style={{ ...S, fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', marginBottom: 8 }}>{title}</div>
       <PieChart width={120} height={100}>
         <Pie data={data} dataKey="value" innerRadius={32} outerRadius={48} paddingAngle={2} startAngle={90} endAngle={-270}>
           {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -69,9 +69,9 @@ function MiniDonut({ data, title }: { data: { name: string; value: number }[]; t
           <div key={d.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <div style={{ width: 6, height: 6, borderRadius: 1, background: COLORS[i % COLORS.length], flexShrink: 0 }} />
-              <span style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.45)' }}>{d.name}</span>
+              <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.45)' }}>{d.name}</span>
             </div>
-            <span style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)' }}>{Math.round(d.value / Math.max(total, 1) * 100)}%</span>
+            <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)' }}>{Math.round(d.value / Math.max(total, 1) * 100)}%</span>
           </div>
         ))}
       </div>
@@ -126,7 +126,7 @@ export default function SessionsPage() {
     <>
       <div style={{ marginBottom: 22 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: 'var(--text)', margin: 0 }}>sessions</h1>
-        <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 4 }}>
+        <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 4 }}>
           behavior and devices
         </div>
       </div>
@@ -134,13 +134,13 @@ export default function SessionsPage() {
       {/* 3 donuts + gauge */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 160px', gap: 14, marginBottom: 14 }} className="sess-top-grid">
         <Sec title="devices" style={{ marginBottom: 0 }}>
-          {devData.length ? <MiniDonut data={devData} title="" /> : <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.2)' }}>no data</span>}
+          {devData.length ? <MiniDonut data={devData} title="" /> : <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)' }}>no data</span>}
         </Sec>
         <Sec title="browsers" style={{ marginBottom: 0 }}>
-          {brwData.length ? <MiniDonut data={brwData} title="" /> : <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.2)' }}>no data</span>}
+          {brwData.length ? <MiniDonut data={brwData} title="" /> : <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)' }}>no data</span>}
         </Sec>
-        <Sec title="sistemas operativos" style={{ marginBottom: 0 }}>
-          {osData.length ? <MiniDonut data={osData} title="" /> : <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.2)' }}>no data</span>}
+        <Sec title="operating systems" style={{ marginBottom: 0 }}>
+          {osData.length ? <MiniDonut data={osData} title="" /> : <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)' }}>no data</span>}
         </Sec>
         <Sec title="bounce rate" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <BounceGauge rate={stats.bounceRate} />
@@ -152,10 +152,10 @@ export default function SessionsPage() {
         <Sec title="avg duration by page">
           <ResponsiveContainer width="100%" height={140}>
             <BarChart data={durByPage} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 10 }}>
-              <XAxis type="number" tick={{ fill: 'rgba(254,240,244,0.3)', fontSize: 9 }} tickLine={false} axisLine={false} tickFormatter={v => `${v}s`} />
-              <YAxis type="category" dataKey="page" tick={{ fill: 'rgba(254,240,244,0.45)', fontSize: 9, fontFamily: 'Space Mono, monospace' }} tickLine={false} axisLine={false} width={65} />
+              <XAxis type="number" tick={{ fill: 'rgba(254,240,244,0.3)', fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={v => `${v}s`} />
+              <YAxis type="category" dataKey="page" tick={{ fill: 'rgba(254,240,244,0.45)', fontSize: 12, fontFamily: 'Space Mono, monospace' }} tickLine={false} axisLine={false} width={65} />
               <Tooltip contentStyle={TT} formatter={(v) => [formatDur(Number(v)), 'avg duration']} />
-              <Bar dataKey="avg" name="segundos" fill="#c41428" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="avg" name="seconds" fill="#c41428" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Sec>
@@ -168,29 +168,29 @@ export default function SessionsPage() {
             <thead>
               <tr>
                 {['ID', 'origin', 'pages', 'duration', 'device', 'type', 'first visit'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', ...S, fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.55)', paddingBottom: 10, paddingRight: 12, borderBottom: '1px solid rgba(196,20,40,0.1)', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h} style={{ textAlign: 'left', ...S, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.55)', paddingBottom: 10, paddingRight: 12, borderBottom: '1px solid rgba(196,20,40,0.1)', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {paginated.map((s: SessionSummary) => {
-                const time = new Date(s.firstSeen).toLocaleString('es-ES', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                const time = new Date(s.firstSeen).toLocaleString('en-GB', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                 return (
                   <tr key={s.sessionId}>
-                    <td style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.35)', padding: '8px 12px 8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', fontFamily: 'monospace' }}>{s.sessionId}</td>
-                    <td style={{ ...S, fontSize: 9, color: 'var(--text)', padding: '8px 12px 8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>
+                    <td style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.35)', padding: '8px 12px 8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', fontFamily: 'monospace' }}>{s.sessionId}</td>
+                    <td style={{ ...S, fontSize: 12, color: 'var(--text)', padding: '8px 12px 8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>
                       {s.city && s.country ? `${s.city}, ${s.country}` : s.country ?? '—'}
                     </td>
-                    <td style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.45)', padding: '8px 12px 8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.45)', padding: '8px 12px 8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {s.pages.join(' → ')}
                     </td>
-                    <td style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.5)', padding: '8px 12px 8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>{formatDur(s.duration)}</td>
-                    <td style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', padding: '8px 12px 8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>
+                    <td style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.5)', padding: '8px 12px 8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>{formatDur(s.duration)}</td>
+                    <td style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.4)', padding: '8px 12px 8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>
                       {[s.device, s.os].filter(Boolean).join(' / ')}
                     </td>
                     <td style={{ padding: '8px 12px 8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
                       <span style={{
-                        ...S, fontSize: 8, letterSpacing: '0.08em',
+                        ...S, fontSize: 12, letterSpacing: '0.08em',
                         padding: '2px 7px', borderRadius: 20,
                         background: s.isNew ? 'rgba(196,20,40,0.15)' : 'rgba(255,255,255,0.05)',
                         color: s.isNew ? 'var(--primary)' : 'rgba(254,240,244,0.3)',
@@ -199,7 +199,7 @@ export default function SessionsPage() {
                         {s.isNew ? 'new' : 'returning'}
                       </span>
                     </td>
-                    <td style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.3)', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>{time}</td>
+                    <td style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>{time}</td>
                   </tr>
                 )
               })}
@@ -210,17 +210,17 @@ export default function SessionsPage() {
         {/* Pagination */}
         {totalPages > 1 && (
           <div style={{ display: 'flex', gap: 6, marginTop: 16, justifyContent: 'center', alignItems: 'center' }}>
-            <button
+            <button type="button"
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              style={{ background: 'none', border: '1px solid rgba(196,20,40,0.2)', borderRadius: 6, padding: '5px 12px', ...S, fontSize: 9, color: page === 0 ? 'rgba(254,240,244,0.2)' : 'var(--text)', cursor: page === 0 ? 'default' : 'pointer' }}
-            >← ant</button>
-            <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.3)' }}>{page + 1} / {totalPages}</span>
-            <button
+              style={{ background: 'none', border: '1px solid rgba(196,20,40,0.2)', borderRadius: 6, padding: '5px 12px', ...S, fontSize: 12, color: page === 0 ? 'rgba(254,240,244,0.2)' : 'var(--text)', cursor: page === 0 ? 'default' : 'pointer' }}
+            >← prev</button>
+            <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)' }}>{page + 1} / {totalPages}</span>
+            <button type="button"
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
               disabled={page === totalPages - 1}
-              style={{ background: 'none', border: '1px solid rgba(196,20,40,0.2)', borderRadius: 6, padding: '5px 12px', ...S, fontSize: 9, color: page === totalPages - 1 ? 'rgba(254,240,244,0.2)' : 'var(--text)', cursor: page === totalPages - 1 ? 'default' : 'pointer' }}
-            >sig →</button>
+              style={{ background: 'none', border: '1px solid rgba(196,20,40,0.2)', borderRadius: 6, padding: '5px 12px', ...S, fontSize: 12, color: page === totalPages - 1 ? 'rgba(254,240,244,0.2)' : 'var(--text)', cursor: page === totalPages - 1 ? 'default' : 'pointer' }}
+            >next →</button>
           </div>
         )}
       </Sec>

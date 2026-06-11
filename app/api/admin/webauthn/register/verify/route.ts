@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   const stored = await consumeChallenge(_token)
   if (!stored || stored.meta !== session.uid) {
-    return NextResponse.json({ error: 'Challenge inválido o expirado' }, { status: 400 })
+    return NextResponse.json({ error: 'Invalid or expired challenge' }, { status: 400 })
   }
 
   const { rpID, origin } = getRpConfig()
@@ -33,23 +33,24 @@ export async function POST(req: NextRequest) {
       requireUserVerification: false,
     })
   } catch (e) {
-    return NextResponse.json({ error: `Verificación fallida: ${(e as Error).message}` }, { status: 400 })
+    return NextResponse.json({ error: `Verification failed: ${(e as Error).message}` }, { status: 400 })
   }
 
   if (!verification.verified || !verification.registrationInfo) {
-    return NextResponse.json({ error: 'Verificación fallida' }, { status: 400 })
+    return NextResponse.json({ error: 'Verification failed' }, { status: 400 })
   }
 
   const { credential } = verification.registrationInfo
 
-  await addWebAuthnCredential(session.uid, {
+  const newCred = {
     id: credential.id,
     publicKey: Buffer.from(credential.publicKey).toString('base64url'),
     counter: credential.counter,
     transports: response.response.transports,
-    name: (name?.trim() || 'Llave de seguridad').slice(0, 64),
+    name: (name?.trim() || 'Security key').slice(0, 64),
     createdAt: new Date().toISOString(),
-  })
+  }
+  await addWebAuthnCredential(session.uid, newCred)
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, credential: { id: newCred.id, name: newCred.name, createdAt: newCred.createdAt } })
 }

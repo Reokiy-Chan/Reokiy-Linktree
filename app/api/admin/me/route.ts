@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession, verifyPassword, hashPassword } from '@/app/lib/auth'
-import { getUser, ensureRoot, toSafeUser, SECTIONS, updateUser } from '@/app/lib/users'
+import { getUser, ensureRoot, toSafeUser, PERMISSIONS, updateUser } from '@/app/lib/users'
+import { appendAudit } from '@/app/lib/audit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,11 +18,11 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     user: toSafeUser(user),
     isRoot: !!user.isRoot,
-    permissions: user.isRoot ? [...SECTIONS] : user.permissions,
+    permissions: user.isRoot ? [...PERMISSIONS] : user.permissions,
   })
 }
 
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
   const session = await getSession(req)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -33,17 +34,26 @@ export async function PATCH(req: Request) {
 
   if (typeof body.name === 'string' && body.name.trim()) updates.name = body.name.trim()
   if (typeof body.avatar === 'string') updates.avatar = body.avatar
+  if (typeof body.pronouns === 'string') updates.pronouns = body.pronouns.slice(0, 40)
+  if (typeof body.bio === 'string') updates.bio = body.bio.slice(0, 280)
+  if (typeof body.bannerUrl === 'string') updates.bannerUrl = body.bannerUrl
+  if (body.dismissMessage === true) updates.pendingMessage = undefined
 
   if (body.changePassword) {
     const { current, next } = body.changePassword
     if (!user.isRoot) {
-      const ok = await verifyPassword(current, user.passwordHash ?? '')
-      if (!ok) return NextResponse.json({ error: 'Contraseña actual incorrecta' }, { status: 400 })
+      const { ok } = await verifyPassword(current, user.passwordHash ?? '')
+      if (!ok) return NextResponse.json({ error: 'Wrong Password' }, { status: 400 })
     }
-    if (!next || next.length < 6) return NextResponse.json({ error: 'Mínimo 6 caracteres' }, { status: 400 })
+    if (!next || next.length < 6) return NextResponse.json({ error: 'At Least 6 Characters' }, { status: 400 })
     updates.passwordHash = await hashPassword(next)
   }
 
   await updateUser(user.id, updates)
+  const action = updates.passwordHash ? 'account.password' : 'account.update'
+  await appendAudit({
+    action, actorId: session.uid, actorName: session.u, actorUsername: session.u,
+    detail: updates.passwordHash ? 'password updated' : Object.keys(updates).join(', '),
+  }).catch(() => {})
   return NextResponse.json({ ok: true })
 }

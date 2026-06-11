@@ -9,7 +9,7 @@ interface ThemeContextValue {
   mounted: boolean
 }
 
-export const ThemeContext = createContext<ThemeContextValue>({
+const ThemeContext = createContext<ThemeContextValue>({
   palette: PALETTES[0],
   bgIndex: 0,
   mounted: false,
@@ -79,7 +79,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           transform: 'scale(1.06)',
           opacity: bgReady ? 1 : 0,
           transition: 'opacity 0.6s ease',
-          willChange: 'opacity',
+          willChange: bgReady ? 'auto' : 'opacity',
         }}
       />
       {children}

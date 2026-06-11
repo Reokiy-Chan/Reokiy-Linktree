@@ -6,13 +6,13 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import type { Stats } from '@/app/lib/data'
 import WorldMapV2 from '../components/WorldMapV2'
 
-const TT = { background: 'rgba(5,0,7,0.97)', border: '1px solid rgba(196,20,40,0.35)', borderRadius: 8, fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#fee0f4', padding: '6px 10px' }
+const TT = { background: 'rgba(5,0,7,0.97)', border: '1px solid rgba(196,20,40,0.35)', borderRadius: 8, fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#fee0f4', padding: '6px 10px' }
 const S: React.CSSProperties = { fontFamily: 'var(--font-body)' }
 
 function Sec({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(196,20,40,0.15)', borderRadius: 12, padding: '18px 20px', marginBottom: 14 }}>
-      <div style={{ ...S, fontSize: 8, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', marginBottom: 16 }}>{title}</div>
+      <div style={{ ...S, fontSize: 12, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', marginBottom: 16 }}>{title}</div>
       {children}
     </div>
   )
@@ -59,14 +59,14 @@ export default function GeographyPage() {
     <>
       <div style={{ marginBottom: 22 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: 'var(--text)', margin: 0 }}>geography</h1>
-        <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 4 }}>
+        <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 4 }}>
           geographic traffic distribution
         </div>
       </div>
 
       {/* Map */}
       <div style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(196,20,40,0.15)', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
-        <div style={{ ...S, fontSize: 8, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', padding: '14px 16px 0' }}>
+        <div style={{ ...S, fontSize: 12, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', padding: '14px 16px 0' }}>
           world distribution
         </div>
         <WorldMapV2 height={280} />
@@ -80,7 +80,7 @@ export default function GeographyPage() {
               <thead>
                 <tr>
                   {['country', 'visits', '%', ''].map(h => (
-                    <th key={h} style={{ textAlign: 'left', ...S, fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.55)', paddingBottom: 10, paddingRight: 12, borderBottom: '1px solid rgba(196,20,40,0.1)' }}>{h}</th>
+                    <th key={h} style={{ textAlign: 'left', ...S, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.55)', paddingBottom: 10, paddingRight: 12, borderBottom: '1px solid rgba(196,20,40,0.1)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -91,9 +91,9 @@ export default function GeographyPage() {
                     onClick={() => setSelected(selected === c.code ? null : c.code)}
                     style={{ cursor: 'pointer', background: selected === c.code ? 'rgba(196,20,40,0.07)' : 'transparent' }}
                   >
-                    <td style={{ ...S, fontSize: 10, color: 'var(--text)', padding: '7px 12px 7px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>{c.country}</td>
-                    <td style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.6)', padding: '7px 12px 7px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>{c.count}</td>
-                    <td style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.35)', padding: '7px 12px 7px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>{Math.round(c.count / stats.total * 100)}%</td>
+                    <td style={{ ...S, fontSize: 12, color: 'var(--text)', padding: '7px 12px 7px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>{c.country}</td>
+                    <td style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.6)', padding: '7px 12px 7px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>{c.count}</td>
+                    <td style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.35)', padding: '7px 12px 7px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', whiteSpace: 'nowrap' }}>{Math.round(c.count / stats.total * 100)}%</td>
                     <td style={{ padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', width: '40%' }}>
                       <Bar100 value={c.count} max={maxCountry} />
                     </td>
@@ -108,24 +108,24 @@ export default function GeographyPage() {
         <Sec title={selected ? `cities — ${stats.byCountry.find(c => c.code === selected)?.country ?? selected}` : 'visits by country'}>
           {selected ? (
             cities.length === 0 ? (
-              <div style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.25)', fontStyle: 'italic' }}>no city data</div>
+              <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.25)', fontStyle: 'italic' }}>no city data</div>
             ) : (
               <div>
                 {cities.map((c, i) => (
                   <div key={c.city} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', borderBottom: i < cities.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                    <span style={{ ...S, fontSize: 10, color: 'var(--text)', flex: '0 0 100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.city}</span>
+                    <span style={{ ...S, fontSize: 12, color: 'var(--text)', flex: '0 0 100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.city}</span>
                     <Bar100 value={c.count} max={cities[0].count} color="#e8195c" />
-                    <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', flex: '0 0 24px', textAlign: 'right' }}>{c.count}</span>
+                    <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.4)', flex: '0 0 24px', textAlign: 'right' }}>{c.count}</span>
                   </div>
                 ))}
-                <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginTop: 12, cursor: 'pointer' }} onClick={() => setSelected(null)}>← all countries</div>
+                <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)', marginTop: 12, cursor: 'pointer' }} onClick={() => setSelected(null)}>← all countries</div>
               </div>
             )
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={stats.byCountry.slice(0, 8)} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 10 }}>
-                <XAxis type="number" tick={{ fill: 'rgba(254,240,244,0.3)', fontSize: 9 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                <YAxis type="category" dataKey="country" tick={{ fill: 'rgba(254,240,244,0.45)', fontSize: 9, fontFamily: 'Space Mono, monospace' }} tickLine={false} axisLine={false} width={65} />
+                <XAxis type="number" tick={{ fill: 'rgba(254,240,244,0.3)', fontSize: 12 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="country" tick={{ fill: 'rgba(254,240,244,0.45)', fontSize: 12, fontFamily: 'Space Mono, monospace' }} tickLine={false} axisLine={false} width={65} />
                 <Tooltip contentStyle={TT} cursor={{ fill: 'rgba(196,20,40,0.07)' }} />
                 <Bar dataKey="count" name="visits" fill="#e8195c" radius={[0, 4, 4, 0]} />
               </BarChart>

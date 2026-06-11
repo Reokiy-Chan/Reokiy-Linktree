@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
 import ParticlesBg from '../components/ParticlesBg'
 import Carousel from '../components/Carousel'
 import { useDiscord } from '../hooks/useDiscord'
@@ -15,18 +17,21 @@ const STICKER_ANIM = [
 function Sticker({ src, alt, idx = 0, style }: { src: string; alt: string; idx?: number; style?: React.CSSProperties }) {
   const a = STICKER_ANIM[idx % STICKER_ANIM.length]
   return (
-    <img
-      src={src}
-      alt={alt}
-      style={{
-        width: 56, height: 56,
-        objectFit: 'contain',
-        filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.4))',
-        animation: `float ${a.dur}s ease-in-out infinite`,
-        animationDelay: `${a.delay}s`,
-        ...style,
-      }}
-    />
+    <div style={{ position: 'relative', width: 56, height: 56, flexShrink: 0, ...style }}>
+      <Image
+        src={src}
+        alt={alt}
+        width={56}
+        height={56}
+        unoptimized
+        style={{
+          objectFit: 'contain',
+          filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.4))',
+          animation: `float ${a.dur}s ease-in-out infinite`,
+          animationDelay: `${a.delay}s`,
+        }}
+      />
+    </div>
   )
 }
 
@@ -40,21 +45,27 @@ const FLOAT_ANIMS = [
 function FloatingSticker({ src, top, left, size = 40, idx = 0 }: { src: string; top: string; left: string; size?: number; idx?: number }) {
   const a = FLOAT_ANIMS[idx % FLOAT_ANIMS.length]
   return (
-    <img
-      src={src}
-      alt=""
+    <div
       aria-hidden
       style={{
         position: 'absolute', top, left,
         width: size, height: size,
-        objectFit: 'contain',
         opacity: 0.15,
         animation: `float ${a.dur}s ease-in-out infinite`,
         animationDelay: `${a.delay}s`,
         pointerEvents: 'none',
         zIndex: 0,
       }}
-    />
+    >
+      <Image
+        src={src}
+        alt=""
+        width={size}
+        height={size}
+        unoptimized
+        style={{ objectFit: 'contain' }}
+      />
+    </div>
   )
 }
 
@@ -93,7 +104,7 @@ function GameCard({ emoji, game, description, sticker }: { emoji: string; game: 
         background: hovered ? 'rgba(var(--primary-rgb),0.08)' : 'var(--glass)',
         border: `1px solid ${hovered ? 'rgba(var(--primary-rgb),0.4)' : 'var(--glass-border)'}`,
         borderRadius: 14,
-        transition: 'all 0.25s ease',
+        transition: 'background 0.25s ease, color 0.25s ease, border-color 0.25s ease, opacity 0.25s ease, transform 0.25s ease',
         transform: hovered ? 'translateX(4px)' : 'none',
         cursor: 'default',
       }}
@@ -105,10 +116,13 @@ function GameCard({ emoji, game, description, sticker }: { emoji: string; game: 
         transform: hovered ? 'scale(1.2) rotate(-5deg)' : 'scale(1)',
       }}>
         {sticker > 0 ? (
-          <img
+          <Image
             src={`/emojis/reokichan 56 ${sticker}.png`}
             alt={game}
-            style={{ width: 44, height: 44, objectFit: 'contain' }}
+            width={44}
+            height={44}
+            unoptimized
+            style={{ objectFit: 'contain' }}
           />
         ) : (
           <span style={{ fontSize: 32 }}>{emoji}</span>
@@ -185,10 +199,10 @@ export default function AboutMe() {
         }}
       >
         {/* ── Back link ── */}
-        <a href="/" style={{
+        <Link href="/" style={{
           alignSelf: 'flex-start',
           fontFamily: 'var(--font-body)',
-          fontSize: 11,
+          fontSize: 12,
           letterSpacing: '0.1em',
           color: 'var(--text-muted)',
           textDecoration: 'none',
@@ -202,7 +216,7 @@ export default function AboutMe() {
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'}
         >
           ← back to links
-        </a>
+        </Link>
 
         {/* ── Header ── */}
         <div style={{ textAlign: 'center', marginBottom: 30, position: 'relative' }}>
@@ -216,9 +230,8 @@ export default function AboutMe() {
                 filter: 'blur(7px)', opacity: 0.55, animation: 'spin-slow 6s linear infinite',
               }} />
               {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt="reokiy" style={{
-                  position: 'relative', width: 96, height: 96, borderRadius: 26, objectFit: 'cover',
+                <Image src={avatarUrl} alt="reokiy" width={96} height={96} unoptimized style={{
+                  position: 'relative', borderRadius: 26, objectFit: 'cover',
                   border: '1px solid rgba(var(--pink-rgb),0.4)', animation: 'float 5s ease-in-out infinite',
                 }} />
               ) : (
@@ -239,16 +252,18 @@ export default function AboutMe() {
           {/* Animated sticker showcase */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
             {STICKER_VARIANTS.map((v, i) => (
-              <img
+              <Image
                 key={v}
                 src={`/emojis/reokichan 56 ${v}.png`}
                 alt={`reokichan ${v}`}
+                width={38}
+                height={38}
+                unoptimized
                 style={{
-                  width: 38, height: 38,
                   objectFit: 'contain',
                   opacity: activeStickerIdx === i ? 1 : 0.3,
                   transform: activeStickerIdx === i ? 'scale(1.3) translateY(-4px)' : 'scale(1)',
-                  transition: 'all 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+                  transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
                   filter: activeStickerIdx === i ? 'drop-shadow(0 0 8px rgba(var(--pink-rgb),0.6))' : 'none',
                 }}
               />
@@ -291,7 +306,7 @@ export default function AboutMe() {
                 animation: `note-appear 0.5s ease ${0.1 + i * 0.08}s both`,
               }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 18, color: 'var(--pink)', lineHeight: 1 }}>{s.value}</div>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: 7, letterSpacing: '0.14em', color: 'var(--text-muted)', marginTop: 4 }}>{s.label}</div>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, letterSpacing: '0.14em', color: 'var(--text-muted)', marginTop: 4 }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -352,7 +367,7 @@ export default function AboutMe() {
               }}>
                 <span style={{ fontSize: 24, flexShrink: 0, lineHeight: 1 }}>{icon}</span>
                 <div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text)', letterSpacing: '0.06em', marginBottom: 2 }}>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text)', letterSpacing: '0.06em', marginBottom: 2 }}>
                     {title}
                   </div>
                   <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 13, color: 'var(--text-muted)' }}>
@@ -370,8 +385,9 @@ export default function AboutMe() {
           <div style={{
             position: 'absolute', right: -20, top: -20,
             opacity: 0.08, pointerEvents: 'none',
+            width: 100, height: 100,
           }}>
-            <img src="/emojis/reokichan 112 3.png" alt="" style={{ width: 100, height: 100, objectFit: 'contain' }} />
+            <Image src="/emojis/reokichan 112 3.png" alt="" width={100} height={100} unoptimized style={{ objectFit: 'contain' }} />
           </div>
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={{ display: 'flex', gap: 0, flexDirection: 'column' }}>
@@ -381,14 +397,14 @@ export default function AboutMe() {
                 { year: '2024', text: 'After that, I made Pornhub videos and got my first followers and likes.' },
                 { year: 'Today', text: 'Since then, I have stopped making Pornhub videos and started focusing more on my content on X/Twitter, Bluesky and Fansly.' },
               ].map(({ year, text }, i) => (
-                <div key={i} style={{ display: 'flex', gap: 14, marginBottom: i < 4 ? 16 : 0 }}>
+                <div key={year} style={{ display: 'flex', gap: 14, marginBottom: i < 4 ? 16 : 0 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: '50%',
                       background: 'rgba(var(--primary-rgb),0.15)',
                       border: '1px solid rgba(var(--primary-rgb),0.3)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: 'var(--font-body)', fontSize: 8,
+                      fontFamily: 'var(--font-body)', fontSize: 12,
                       color: 'var(--pink)', letterSpacing: '0.05em', flexShrink: 0,
                     }}>
                       {year}
@@ -425,12 +441,14 @@ export default function AboutMe() {
             marginTop: 20, flexWrap: 'wrap',
           }}>
             {STICKER_VARIANTS.map(v => (
-              <img
+              <Image
                 key={v}
                 src={`/emojis/reokichan 28 ${v}.png`}
                 alt={`sticker ${v}`}
+                width={28}
+                height={28}
+                unoptimized
                 style={{
-                  width: 28, height: 28,
                   objectFit: 'contain',
                   animation: `float ${2.5 + v * 0.3}s ease-in-out infinite`,
                   animationDelay: `${v * 0.2}s`,
@@ -465,7 +483,7 @@ export default function AboutMe() {
             ].map(fact => (
               <span key={fact} style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 10,
+                fontSize: 12,
                 letterSpacing: '0.08em',
                 padding: '6px 12px',
                 borderRadius: 999,

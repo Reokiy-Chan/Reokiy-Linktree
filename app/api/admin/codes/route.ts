@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/app/lib/auth'
 import { listCodes, createCode, getCodeByString } from '@/app/lib/codes'
+import { appendAudit } from '@/app/lib/audit'
 
 export async function GET(req: NextRequest) {
   const session = await getSession(req)
@@ -66,5 +67,10 @@ export async function POST(req: NextRequest) {
     scratchDifficulty:         scratchDifficulty         || 'normal',
     maxUses: parsedMaxUses,
   })
+  await appendAudit({
+    action: 'code.create',
+    actorId: session.uid, actorName: session.u, actorUsername: session.u,
+    target: code, detail: label || code,
+  }).catch(() => {})
   return NextResponse.json({ code: entry }, { status: 201 })
 }

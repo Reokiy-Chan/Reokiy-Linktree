@@ -39,7 +39,7 @@ export default function KPICard({ label, value, delta, sparkData, sub, accent }:
       flex: 1, minWidth: 140,
       display: 'flex', flexDirection: 'column', gap: 8,
     }}>
-      <div style={{ fontFamily: 'var(--font-body)', fontSize: 8, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.38)' }}>
+      <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.38)' }}>
         {label}
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
@@ -49,12 +49,12 @@ export default function KPICard({ label, value, delta, sparkData, sub, accent }:
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
             {delta != null && (
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: deltaColor }}>
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: deltaColor }}>
                 {deltaSign}{delta}%
               </span>
             )}
             {sub && (
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.3)' }}>
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(254,240,244,0.3)' }}>
                 {sub}
               </span>
             )}

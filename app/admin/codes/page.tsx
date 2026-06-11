@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import type { RedeemCode, RewardType, GiftPattern, ScratchDifficulty, GiftStyle, ScratchStyle } from '@/app/lib/codes'
 
 const S: React.CSSProperties = { fontFamily: 'var(--font-body)' }
@@ -14,11 +15,40 @@ const BADGE: Record<RewardType | 'used', { label: string; color: string }> = {
   used:   { label: 'used',   color: 'rgba(254,240,244,0.18)' },
 }
 
+// ─── Module-scope style consts ───────────────────────────────────────────────
+
+const modalOverlayStyle: React.CSSProperties = {
+  position: 'fixed', inset: 0, zIndex: 200,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'rgba(5,0,7,0.85)', backdropFilter: 'blur(8px)', padding: 16,
+}
+
+const codeDetailCardStyle: React.CSSProperties = {
+  width: '100%', maxWidth: 420,
+  background: '#0a0010', border: '1px solid rgba(196,20,40,0.3)',
+  borderRadius: 16, padding: 24, maxHeight: '90vh', overflowY: 'auto',
+}
+
+const modalOuterOverlayStyle: React.CSSProperties = {
+  position: 'fixed', inset: 0, zIndex: 200,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'rgba(5,0,7,0.85)', backdropFilter: 'blur(8px)',
+}
+
+const modalInnerCardStyle: React.CSSProperties = {
+  width: '100%', maxWidth: 460,
+  background: '#0a0010', border: '1px solid rgba(196,20,40,0.3)',
+  borderRadius: 16, padding: 28, margin: 16,
+  maxHeight: '90vh', overflowY: 'auto',
+}
+
+// ─── Badge ───────────────────────────────────────────────────────────────────
+
 function Badge({ type, used }: { type: RewardType; used: boolean }) {
   const b = used ? BADGE.used : BADGE[type]
   return (
     <span style={{
-      ...S, fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase',
+      ...S, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase',
       padding: '2px 7px', borderRadius: 20,
       border: `1px solid ${b.color}44`,
       background: `${b.color}18`,
@@ -105,11 +135,12 @@ function GiftBoxPreview({
   const patternFill = pattern !== 'none' && (pattern !== 'custom' || patternImage)
     ? `url(#${patternId})`
     : 'transparent'
+  const patternEl = renderPattern()
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
       <svg width="60" height="68" viewBox="0 0 140 160" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}>
-        <defs>{renderPattern()}</defs>
+        <defs>{patternEl}</defs>
         {/* Lid */}
         <rect x="14" y="38" width="112" height="28" rx="4" fill={boxColor} />
         <rect x="14" y="38" width="112" height="28" rx="4" fill={patternFill} />
@@ -122,7 +153,7 @@ function GiftBoxPreview({
         <rect x="62" y="66" width="16" height="86" fill={ribbonColor} opacity="0.85" />
         <rect x="10" y="96" width="120" height="12" fill={ribbonColor} opacity="0.85" />
       </svg>
-      <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', alignSelf: 'center', marginLeft: 10 }}>preview</div>
+      <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)', alignSelf: 'center', marginLeft: 10 }}>preview</div>
     </div>
   )
 }
@@ -135,7 +166,8 @@ function CodeEditInline({ code, onSaved, onCancel }: { code: RedeemCode; onSaved
   const fieldStyle: React.CSSProperties = {
     width: '100%', padding: '8px 11px', boxSizing: 'border-box',
     background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,20,40,0.2)',
-    borderRadius: 7, color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 11, outline: 'none',
+    borderRadius: 7, color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 12,
+    outline: 'none', boxShadow: 'none',
   }
   const save = async () => {
     setSaving(true); setErr('')
@@ -145,23 +177,23 @@ function CodeEditInline({ code, onSaved, onCancel }: { code: RedeemCode; onSaved
     })
     const d = await r.json()
     if (r.ok) onSaved(d.code)
-    else setErr(d.error ?? 'Error al guardar')
+    else setErr(d.error ?? 'Save failed')
     setSaving(false)
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div>
-        <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>título</label>
+        <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>title</label>
         <input value={rewardTitle} onChange={e => setRewardTitle(e.target.value)} style={fieldStyle} />
       </div>
       <div>
-        <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>nota admin</label>
+        <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>admin note</label>
         <input value={adminNote} onChange={e => setAdminNote(e.target.value)} style={fieldStyle} />
       </div>
-      {err && <div style={{ ...S, fontSize: 10, color: '#f87171' }}>{err}</div>}
+      {err && <div style={{ ...S, fontSize: 12, color: '#f87171' }}>{err}</div>}
       <div style={{ display: 'flex', gap: 6 }}>
-        <button onClick={onCancel} style={{ ...S, flex: 1, padding: '8px 0', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, color: 'rgba(254,240,244,0.5)', fontSize: 9, cursor: 'pointer' }}>cancelar</button>
-        <button onClick={save} disabled={saving} style={{ ...S, flex: 2, padding: '8px 0', background: 'rgba(196,20,40,0.2)', border: '1px solid rgba(196,20,40,0.4)', borderRadius: 7, color: 'var(--text)', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>{saving ? 'guardando…' : 'guardar'}</button>
+        <button type="button" onClick={onCancel} style={{ ...S, flex: 1, padding: '8px 0', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, color: 'rgba(254,240,244,0.5)', fontSize: 12, cursor: 'pointer' }}>cancel</button>
+        <button type="button" onClick={save} disabled={saving} style={{ ...S, flex: 2, padding: '8px 0', background: 'rgba(196,20,40,0.2)', border: '1px solid rgba(196,20,40,0.4)', borderRadius: 7, color: 'var(--text)', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>{saving ? 'saving…' : 'save'}</button>
       </div>
     </div>
   )
@@ -179,7 +211,7 @@ function CodeDetailModal({
   const [deleting, setDeleting] = useState(false)
 
   const handleDelete = async () => {
-    if (!confirm(`¿Borrar el código ${code.code}?`)) return
+    if (!confirm(`Delete code ${code.code}?`)) return
     setDeleting(true)
     const r = await fetch(`/api/admin/codes/${code.id}`, { method: 'DELETE' })
     if (r.ok) { onDeleted(code.id); onClose() }
@@ -187,18 +219,23 @@ function CodeDetailModal({
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(5,0,7,0.85)', backdropFilter: 'blur(8px)', padding: 16 }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{ width: '100%', maxWidth: 420, background: '#0a0010', border: '1px solid rgba(196,20,40,0.3)', borderRadius: 16, padding: 24, maxHeight: '90vh', overflowY: 'auto' }}>
+    <div
+      style={modalOverlayStyle}
+      role="button"
+      tabIndex={0}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) onClose() }}
+    >
+      <div style={codeDetailCardStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-          <span style={{ ...S, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.75)' }}>
-            {editing ? 'editando código' : 'detalles del código'}
+          <span style={{ ...S, fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.75)' }}>
+            {editing ? 'editing code' : 'code details'}
           </span>
           <div style={{ display: 'flex', gap: 6 }}>
             {!editing && (
-              <button onClick={() => setEditing(true)} style={{ ...S, padding: '5px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,20,40,0.3)', borderRadius: 6, color: 'rgba(196,20,40,0.8)', fontSize: 9, cursor: 'pointer' }}>✎ editar</button>
+              <button type="button" onClick={() => setEditing(true)} style={{ ...S, padding: '5px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,20,40,0.3)', borderRadius: 6, color: 'rgba(196,20,40,0.8)', fontSize: 12, cursor: 'pointer' }}>✎ edit</button>
             )}
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(254,240,244,0.35)', cursor: 'pointer', fontSize: 16 }}>✕</button>
+            <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(254,240,244,0.35)', cursor: 'pointer', fontSize: 16 }}>✕</button>
           </div>
         </div>
 
@@ -217,25 +254,25 @@ function CodeDetailView({ code, onDelete, deleting }: { code: RedeemCode; onDele
   return (
     <>
       <div style={{ fontFamily: 'monospace', fontSize: 20, color: '#fee0f4', marginBottom: 16, letterSpacing: '0.1em' }}>{code.code}</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 14px', ...S, fontSize: 10, marginBottom: 16 }}>
-        <span style={{ color: 'rgba(254,240,244,0.35)' }}>tipo</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 14px', ...S, fontSize: 12, marginBottom: 16 }}>
+        <span style={{ color: 'rgba(254,240,244,0.35)' }}>type</span>
         <span><Badge type={code.rewardType} used={code.used} /></span>
-        {code.rewardTitle && <><span style={{ color: 'rgba(254,240,244,0.35)' }}>título</span><span style={{ color: 'var(--text)' }}>{code.rewardTitle}</span></>}
-        {code.adminNote && <><span style={{ color: 'rgba(254,240,244,0.35)' }}>nota</span><span style={{ color: 'rgba(254,240,244,0.5)' }}>{code.adminNote}</span></>}
-        {code.used && code.usedAt && <><span style={{ color: 'rgba(254,240,244,0.35)' }}>usado</span><span style={{ color: 'rgba(254,240,244,0.4)' }}>{new Date(code.usedAt).toLocaleDateString('es-ES')}</span></>}
-        <span style={{ color: 'rgba(254,240,244,0.35)' }}>creado</span>
-        <span style={{ color: 'rgba(254,240,244,0.3)' }}>{new Date(code.createdAt).toLocaleDateString('es-ES')}</span>
+        {code.rewardTitle && <><span style={{ color: 'rgba(254,240,244,0.35)' }}>title</span><span style={{ color: 'var(--text)' }}>{code.rewardTitle}</span></>}
+        {code.adminNote && <><span style={{ color: 'rgba(254,240,244,0.35)' }}>note</span><span style={{ color: 'rgba(254,240,244,0.5)' }}>{code.adminNote}</span></>}
+        {code.used && code.usedAt && <><span style={{ color: 'rgba(254,240,244,0.35)' }}>used</span><span style={{ color: 'rgba(254,240,244,0.4)' }}>{new Date(code.usedAt).toLocaleDateString('en-GB')}</span></>}
+        <span style={{ color: 'rgba(254,240,244,0.35)' }}>created</span>
+        <span style={{ color: 'rgba(254,240,244,0.3)' }}>{new Date(code.createdAt).toLocaleDateString('en-GB')}</span>
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        <button onClick={() => navigator.clipboard.writeText(code.code)} style={{ ...S, flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, color: 'rgba(254,240,244,0.5)', fontSize: 9, cursor: 'pointer' }}>⧉ copiar código</button>
-        <button onClick={onDelete} disabled={deleting} style={{ ...S, padding: '7px 12px', background: 'none', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 7, color: 'rgba(254,240,244,0.3)', fontSize: 9, cursor: 'pointer' }}>{deleting ? '…' : '🗑'}</button>
+        <button type="button" onClick={() => navigator.clipboard.writeText(code.code)} style={{ ...S, flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, color: 'rgba(254,240,244,0.5)', fontSize: 12, cursor: 'pointer' }}>⧉ copy code</button>
+        <button type="button" onClick={onDelete} disabled={deleting} style={{ ...S, padding: '7px 12px', background: 'none', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 7, color: 'rgba(254,240,244,0.3)', fontSize: 12, cursor: 'pointer' }}>{deleting ? '…' : '🗑'}</button>
       </div>
     </>
   )
 }
 
 function StepBar({ current }: { current: number }) {
-  const labels = ['código', 'tipo', 'contenido', 'presentación']
+  const labels = ['code', 'type', 'content', 'presentation']
   return (
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
@@ -243,7 +280,7 @@ function StepBar({ current }: { current: number }) {
           <div key={n} style={{ flex: 1, height: 3, borderRadius: 2, background: n < current ? 'rgba(196,20,40,0.7)' : n === current ? '#c41428' : 'rgba(255,255,255,0.08)' }} />
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 8, ...S, fontSize: 8 }}>
+      <div style={{ display: 'flex', gap: 8, ...S, fontSize: 12 }}>
         {labels.map((l, i) => (
           <span key={l} style={{ color: i + 1 === current ? '#fee0f4' : i + 1 < current ? 'rgba(196,20,40,0.5)' : 'rgba(254,240,244,0.2)', flex: 1 }}>
             {i + 1 < current ? '✓ ' : ''}{l}
@@ -384,11 +421,11 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
   const fieldStyle: React.CSSProperties = {
     width: '100%', padding: '9px 12px', boxSizing: 'border-box',
     background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,20,40,0.2)',
-    borderRadius: 8, color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 11,
-    outline: 'none', transition: 'border-color 0.15s',
+    borderRadius: 8, color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 12,
+    outline: 'none', boxShadow: 'none', transition: 'border-color 0.15s',
   }
-  const focusStyle = { borderColor: 'rgba(196,20,40,0.5)' }
-  const blurStyle = { borderColor: 'rgba(196,20,40,0.2)' }
+  const focusStyle = { borderColor: 'rgba(196,20,40,0.5)', boxShadow: '0 0 0 2px rgba(196,20,40,0.2)' }
+  const blurStyle = { borderColor: 'rgba(196,20,40,0.2)', boxShadow: 'none' }
 
   const ALL_TYPES: RewardType[] = ['text', 'link', 'image', 'fansly']
 
@@ -409,44 +446,42 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
 
   const nextBtnStyle: React.CSSProperties = {
     ...S, padding: '9px 20px', background: 'rgba(196,20,40,0.2)', border: '1px solid rgba(196,20,40,0.4)',
-    borderRadius: 8, color: 'var(--text)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
+    borderRadius: 8, color: 'var(--text)', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase',
     cursor: 'pointer', opacity: 1,
   }
   const backBtnStyle: React.CSSProperties = {
     ...S, padding: '9px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: 8, color: 'rgba(254,240,244,0.5)', fontSize: 10, cursor: 'pointer',
+    borderRadius: 8, color: 'rgba(254,240,244,0.5)', fontSize: 12, cursor: 'pointer',
   }
   const primaryBtn = (disabled: boolean): React.CSSProperties => ({
     ...S, padding: '9px 22px', background: disabled ? 'rgba(196,20,40,0.08)' : 'rgba(196,20,40,0.25)',
     border: '1px solid rgba(196,20,40,0.4)', borderRadius: 8, color: disabled ? 'var(--text-muted)' : 'var(--text)',
-    fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase' as const, cursor: disabled ? 'not-allowed' : 'pointer',
+    fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase' as const, cursor: disabled ? 'not-allowed' : 'pointer',
   })
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(5,0,7,0.85)', backdropFilter: 'blur(8px)',
-    }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{
-        width: '100%', maxWidth: 460,
-        background: '#0a0010', border: '1px solid rgba(196,20,40,0.3)',
-        borderRadius: 16, padding: 28, margin: 16,
-        maxHeight: '90vh', overflowY: 'auto',
-      }}>
+    <div
+      style={modalOuterOverlayStyle}
+      role="button"
+      tabIndex={0}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) onClose() }}
+    >
+      <div style={modalInnerCardStyle}>
         {step === 'done' ? (
           <div style={{ textAlign: 'center', padding: '12px 0' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
             <div style={{ ...S, fontSize: 13, color: 'var(--text)', marginBottom: 6 }}>Code created</div>
             <div style={{ ...S, fontSize: 20, fontFamily: 'monospace', color: 'var(--primary)', letterSpacing: '0.15em', marginBottom: 20 }}>{code.toUpperCase()}</div>
-            <button onClick={onClose} style={{ ...S, padding: '9px 24px', background: 'rgba(196,20,40,0.18)', border: '1px solid rgba(196,20,40,0.4)', borderRadius: 8, color: 'var(--text)', fontSize: 11, cursor: 'pointer' }}>
+            <button type="button" onClick={onClose} style={{ ...S, padding: '9px 24px', background: 'rgba(196,20,40,0.18)', border: '1px solid rgba(196,20,40,0.4)', borderRadius: 8, color: 'var(--text)', fontSize: 12, cursor: 'pointer' }}>
               Close
             </button>
           </div>
         ) : (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <div style={{ ...S, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.75)' }}>new code</div>
-              <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(254,240,244,0.35)', cursor: 'pointer', fontSize: 16 }}>✕</button>
+              <div style={{ ...S, fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.75)' }}>new code</div>
+              <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(254,240,244,0.35)', cursor: 'pointer', fontSize: 16 }}>✕</button>
             </div>
 
             <StepBar current={step as number} />
@@ -455,7 +490,7 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div>
-                    <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Código</label>
+                    <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Code</label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <input
                         value={code}
@@ -465,18 +500,18 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
                         onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
                         onBlur={e => Object.assign(e.currentTarget.style, blurStyle)}
                       />
-                      <button type="button" onClick={genCode} style={{ ...S, padding: '0 12px', background: 'rgba(196,20,40,0.1)', border: '1px solid rgba(196,20,40,0.25)', borderRadius: 8, color: 'rgba(254,240,244,0.6)', fontSize: 10, cursor: 'pointer' }}>
-                        aleatorio
+                      <button type="button" onClick={genCode} style={{ ...S, padding: '0 12px', background: 'rgba(196,20,40,0.1)', border: '1px solid rgba(196,20,40,0.25)', borderRadius: 8, color: 'rgba(254,240,244,0.6)', fontSize: 12, cursor: 'pointer' }}>
+                        random
                       </button>
                     </div>
                   </div>
                   <div>
-                    <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Nota admin (opcional)</label>
-                    <input value={label} onChange={e => setLabel(e.target.value)} placeholder="para el discord de junio" style={fieldStyle} />
+                    <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Admin note (optional)</label>
+                    <input value={label} onChange={e => setLabel(e.target.value)} aria-label="e.g. june discord" placeholder="e.g. june discord" style={fieldStyle} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-                  <button type="button" onClick={() => setStep(2)} disabled={!code.trim()} style={{ ...nextBtnStyle }}>continuar →</button>
+                  <button type="button" onClick={() => setStep(2)} disabled={!code.trim()} style={{ ...nextBtnStyle }}>continue →</button>
                 </div>
               </>
             )}
@@ -493,15 +528,15 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
                     }}>
                       <span style={{ fontSize: 18 }}>{t === 'link' ? '🔗' : t === 'text' ? '💬' : t === 'image' ? '🖼' : 'F'}</span>
                       <div>
-                        <div style={{ ...S, fontSize: 11, color: 'var(--text)' }}>{t}</div>
-                        <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', marginTop: 2 }}>{CONTENT_META[t].placeholder}</div>
+                        <div style={{ ...S, fontSize: 12, color: 'var(--text)' }}>{t}</div>
+                        <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.35)', marginTop: 2 }}>{CONTENT_META[t].placeholder}</div>
                       </div>
                     </button>
                   ))}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <button type="button" onClick={() => setStep(1)} style={{ ...backBtnStyle }}>← atrás</button>
-                  <button type="button" onClick={() => setStep(3)} style={{ ...nextBtnStyle }}>continuar →</button>
+                  <button type="button" onClick={() => setStep(1)} style={{ ...backBtnStyle }}>← back</button>
+                  <button type="button" onClick={() => setStep(3)} style={{ ...nextBtnStyle }}>continue →</button>
                 </div>
               </>
             )}
@@ -510,51 +545,59 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
               <>
                 {/* Reward title */}
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Título (mostrado al usuario)</label>
-                  <input value={rewardTitle} onChange={e => setRewardTitle(e.target.value)} placeholder="e.g. Enlace especial" style={fieldStyle} />
+                  <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Title (shown to user)</label>
+                  <input value={rewardTitle} onChange={e => setRewardTitle(e.target.value)} aria-label="e.g. Special link" placeholder="e.g. Special link" style={fieldStyle} />
                 </div>
 
                 {/* Reward content según tipo */}
                 {rewardType === 'text' && (
                   <div>
-                    <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Mensaje</label>
+                    <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Message</label>
                     <textarea value={rewardContent} onChange={e => setRewardContent(e.target.value)} rows={3} placeholder={CONTENT_META.text.placeholder} style={{ ...fieldStyle, resize: 'vertical' }} />
                   </div>
                 )}
                 {rewardType === 'link' && (
                   <div>
-                    <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>URL</label>
+                    <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>URL</label>
                     <input value={rewardContent} onChange={e => setRewardContent(e.target.value)} type="url" placeholder={CONTENT_META.link.placeholder} style={fieldStyle} />
                   </div>
                 )}
                 {rewardType === 'image' && (
                   <div>
-                    <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Imagen</label>
+                    <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Image</label>
                     <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) pickFile(f) }} />
                     {imgPreview ? (
                       <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(196,20,40,0.25)', marginBottom: 6 }}>
-                        <img src={imgPreview} alt="preview" style={{ width: '100%', maxHeight: 160, objectFit: 'cover' }} />
+                        <Image src={imgPreview} alt="preview" width={0} height={0} unoptimized style={{ width: '100%', maxHeight: 160, objectFit: 'cover' }} />
                         <button type="button" onClick={() => { setImgFile(null); setImgPreview(null) }} style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(5,0,7,0.8)', border: 'none', borderRadius: 4, color: 'var(--text)', cursor: 'pointer', padding: '2px 6px' }}>✕</button>
                       </div>
                     ) : (
-                      <div onClick={() => fileRef.current?.click()} style={{ border: '2px dashed rgba(196,20,40,0.25)', borderRadius: 8, padding: '24px 16px', textAlign: 'center', cursor: 'pointer', fontSize: 10, color: 'rgba(254,240,244,0.35)' }}>click para subir · jpeg, png, gif, webp · max 10 MB</div>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => fileRef.current?.click()}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') fileRef.current?.click() }}
+                        style={{ border: '2px dashed rgba(196,20,40,0.25)', borderRadius: 8, padding: '24px 16px', textAlign: 'center', cursor: 'pointer', fontSize: 12, color: 'rgba(254,240,244,0.35)' }}
+                      >
+                        click to upload · jpeg, png, gif, webp · max 10 MB
+                      </div>
                     )}
                     <div style={{ marginTop: 6 }}>
-                      <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.25)' }}>o URL directa:</label>
-                      <input value={rewardContent} onChange={e => { setRewardContent(e.target.value); if (e.target.value) { setImgFile(null); setImgPreview(null) } }} placeholder="https://i.imgur.com/…" style={{ ...fieldStyle, marginTop: 4 }} />
+                      <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.25)' }}>o URL directa:</label>
+                      <input value={rewardContent} onChange={e => { setRewardContent(e.target.value); if (e.target.value) { setImgFile(null); setImgPreview(null) } }} aria-label="https://i.imgur.com/…" placeholder="https://i.imgur.com/…" style={{ ...fieldStyle, marginTop: 4 }} />
                     </div>
                   </div>
                 )}
                 {rewardType === 'fansly' && (
                   <div>
-                    <label style={{ ...S, fontSize: 9, color: '#1da1f2', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Código Fansly</label>
+                    <label style={{ ...S, fontSize: 12, color: '#1da1f2', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Fansly Code</label>
                     <input value={rewardContent} onChange={e => setRewardContent(e.target.value)} placeholder={CONTENT_META.fansly.placeholder} style={{ ...fieldStyle, fontFamily: 'monospace' }} />
                   </div>
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
-                  <button type="button" onClick={() => setStep(2)} style={{ ...backBtnStyle }}>← atrás</button>
-                  <button type="button" onClick={() => setStep(4)} disabled={!rewardContent.trim() && rewardType !== 'image'} style={{ ...nextBtnStyle }}>continuar →</button>
+                  <button type="button" onClick={() => setStep(2)} style={{ ...backBtnStyle }}>← back</button>
+                  <button type="button" onClick={() => setStep(4)} disabled={!rewardContent.trim() && rewardType !== 'image'} style={{ ...nextBtnStyle }}>continue →</button>
                 </div>
               </>
             )}
@@ -565,30 +608,30 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
                 <div style={sectionStyle}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: giftAnimation ? 14 : 0 }}>
                     <div>
-                      <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>🎁 Animación de regalo</div>
-                      <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)' }}>Mostrar una caja animada que el usuario debe abrir</div>
+                      <div style={{ ...S, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>🎁 Gift animation</div>
+                      <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)' }}>Show an animated box the user must open</div>
                     </div>
                     <button type="button" onClick={() => setGiftAnimation(v => !v)} style={toggleStyle(giftAnimation)}><span style={toggleKnob(giftAnimation)} /></button>
                   </div>
                   {giftAnimation && (
                     <>
                       <div style={{ marginBottom: 12 }}>
-                        <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)' }}>Estilo</label>
+                        <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.35)' }}>Style</label>
                         <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
                           {(['modern', 'legacy'] as const).map(v => (
                             <button key={v} type="button" onClick={() => setGiftStyle(v)} style={{ flex: 1, padding: '8px 10px', borderRadius: 8, background: giftStyle === v ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)', border: `1px solid ${giftStyle === v ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}` }}>
-                              {v === 'modern' ? 'Moderno' : 'Clásico'}
+                              {v === 'modern' ? 'Modern' : 'Classic'}
                             </button>
                           ))}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
                         <div style={{ flex: 1 }}>
-                          <label style={{ ...S, fontSize: 8 }}>Color caja</label>
+                          <label style={{ ...S, fontSize: 12 }}>Box color</label>
                           <input type="color" value={giftBoxColor} onChange={e => setGiftBoxColor(e.target.value)} style={{ width: '100%', marginTop: 4 }} />
                         </div>
                         <div style={{ flex: 1 }}>
-                          <label style={{ ...S, fontSize: 8 }}>Color cinta</label>
+                          <label style={{ ...S, fontSize: 12 }}>Ribbon color</label>
                           <input type="color" value={giftRibbonColor} onChange={e => setGiftRibbonColor(e.target.value)} style={{ width: '100%', marginTop: 4 }} />
                         </div>
                       </div>
@@ -596,14 +639,18 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
                         {GIFT_PATTERNS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                       </select>
                       {giftPattern !== 'none' && giftPattern !== 'custom' && (
-                        <div><label>Color patrón</label><input type="color" value={giftPatternColor} onChange={e => setGiftPatternColor(e.target.value)} style={{ width: '100%', marginTop: 4 }} /></div>
+                        <div><label>Pattern color</label><input type="color" value={giftPatternColor} onChange={e => setGiftPatternColor(e.target.value)} style={{ width: '100%', marginTop: 4 }} /></div>
                       )}
                       {giftPattern === 'custom' && (
                         <div>
-                          <label>Imagen patrón</label>
+                          <label>Pattern image</label>
                           <input ref={patternFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) pickPatternFile(f) }} />
-                          <button type="button" onClick={() => patternFileRef.current?.click()} style={{ ...S, marginTop: 4, padding: '6px 12px', background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(196,20,40,0.3)', borderRadius: 6, cursor: 'pointer' }}>Subir imagen</button>
-                          {giftPatternImage && <img src={giftPatternImage} alt="pattern preview" style={{ width: 40, height: 40, marginTop: 8, borderRadius: 6 }} />}
+                          <button type="button" onClick={() => patternFileRef.current?.click()} style={{ ...S, marginTop: 4, padding: '6px 12px', background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(196,20,40,0.3)', borderRadius: 6, cursor: 'pointer' }}>Upload image</button>
+                          {giftPatternImage && (
+                            <div style={{ position: 'relative', width: 40, height: 40, marginTop: 8, borderRadius: 6, overflow: 'hidden' }}>
+                              <Image src={giftPatternImage} alt="pattern preview" fill unoptimized style={{ objectFit: 'cover', borderRadius: 6 }} />
+                            </div>
+                          )}
                         </div>
                       )}
                       <GiftBoxPreview boxColor={giftBoxColor} ribbonColor={giftRibbonColor} pattern={giftPattern} patternColor={giftPatternColor} patternImage={giftPatternImage} />
@@ -615,33 +662,33 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
                 <div style={sectionStyle}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: scratchCard ? 14 : 0 }}>
                     <div>
-                      <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>🪄 Tarjeta rasca</div>
-                      <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)' }}>El usuario debe raspar para ver la recompensa</div>
+                      <div style={{ ...S, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>🪄 Scratch card</div>
+                      <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)' }}>User must scratch to reveal the reward</div>
                     </div>
                     <button type="button" onClick={() => setScratchCard(v => !v)} style={toggleStyle(scratchCard)}><span style={toggleKnob(scratchCard)} /></button>
                   </div>
                   {scratchCard && (
                     <>
                       <div style={{ marginBottom: 12 }}>
-                        <label style={{ ...S, fontSize: 8 }}>Estilo</label>
+                        <label style={{ ...S, fontSize: 12 }}>Style</label>
                         <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
                           {(['lottery', 'classic'] as const).map(v => (
                             <button key={v} type="button" onClick={() => setScratchStyle(v)} style={{ flex: 1, padding: '8px 10px', borderRadius: 8, background: scratchStyle === v ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)', border: `1px solid ${scratchStyle === v ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}` }}>
-                              {v === 'lottery' ? 'Lotería' : 'Clásico'}
+                              {v === 'lottery' ? 'Lottery' : 'Classic'}
                             </button>
                           ))}
                         </div>
                       </div>
                       <div>
-                        <label style={{ ...S, fontSize: 8 }}>Color fondo</label>
+                        <label style={{ ...S, fontSize: 12 }}>Background color</label>
                         <input type="color" value={scratchCardColor} onChange={e => setScratchCardColor(e.target.value)} style={{ width: '100%', marginTop: 4 }} />
                       </div>
                       <div>
-                        <label style={{ ...S, fontSize: 8 }}>Texto personalizado (opcional)</label>
-                        <input value={scratchCardLabel} onChange={e => setScratchCardLabel(e.target.value)} placeholder="✦ rasca para revelar ✦" style={fieldStyle} />
+                        <label style={{ ...S, fontSize: 12 }}>Custom text (optional)</label>
+                        <input value={scratchCardLabel} onChange={e => setScratchCardLabel(e.target.value)} aria-label="✦ scratch to reveal ✦" placeholder="✦ scratch to reveal ✦" style={fieldStyle} />
                       </div>
                       <div>
-                        <label style={{ ...S, fontSize: 8 }}>Dificultad</label>
+                        <label style={{ ...S, fontSize: 12 }}>Difficulty</label>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginTop: 4 }}>
                           {SCRATCH_DIFFICULTIES.map(d => (
                             <button key={d.value} type="button" onClick={() => setScratchDifficulty(d.value as ScratchDifficulty)} style={{ padding: '6px', borderRadius: 6, background: scratchDifficulty === d.value ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)', border: `1px solid ${scratchDifficulty === d.value ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}` }}>{d.label}</button>
@@ -654,11 +701,11 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
 
                 {/* Multi-use */}
                 <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(196,20,40,0.1)', borderRadius: 10, padding: '14px 16px' }}>
-                  <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>🔢 Uso</div>
+                  <div style={{ ...S, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>🔢 Uso</div>
                   <div style={{ display: 'flex', gap: 5, marginBottom: maxUsesMode === 'multi' ? 10 : 0, marginTop: 8 }}>
                     {(['single', 'multi', 'unlimited'] as const).map(mode => (
-                      <button key={mode} type="button" onClick={() => setMaxUsesMode(mode)} style={{ flex: 1, padding: '7px 4px', borderRadius: 7, background: maxUsesMode === mode ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)', border: `1px solid ${maxUsesMode === mode ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`, fontSize: 8 }}>
-                        {mode === 'single' ? 'Una vez' : mode === 'multi' ? 'N usos' : 'Ilimitado'}
+                      <button key={mode} type="button" onClick={() => setMaxUsesMode(mode)} style={{ flex: 1, padding: '7px 4px', borderRadius: 7, background: maxUsesMode === mode ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)', border: `1px solid ${maxUsesMode === mode ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`, fontSize: 12 }}>
+                        {mode === 'single' ? 'Single use' : mode === 'multi' ? 'N uses' : 'Unlimited'}
                       </button>
                     ))}
                   </div>
@@ -667,12 +714,12 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
                   )}
                 </div>
 
-                {error && <div style={{ ...S, fontSize: 10, color: 'var(--primary)', textAlign: 'center' }}>{error}</div>}
+                {error && <div style={{ ...S, fontSize: 12, color: 'var(--primary)', textAlign: 'center' }}>{error}</div>}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
-                  <button type="button" onClick={() => setStep(3)} style={{ ...backBtnStyle }}>← atrás</button>
+                  <button type="button" onClick={() => setStep(3)} style={{ ...backBtnStyle }}>← back</button>
                   <button type="button" onClick={submit} disabled={saving || uploading} style={{ ...primaryBtn(saving || uploading) }}>
-                    {uploading ? 'subiendo…' : saving ? 'creando…' : 'crear código'}
+                    {uploading ? 'uploading…' : saving ? 'creating…' : 'create code'}
                   </button>
                 </div>
               </>
@@ -743,17 +790,17 @@ export default function CodesPage() {
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: 'var(--text)', lineHeight: 1.1 }}>redeem codes</div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em', marginTop: 4, textTransform: 'uppercase' }}>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em', marginTop: 4, textTransform: 'uppercase' }}>
               {activeCount} active · {usedCount} used
             </div>
           </div>
-          <button onClick={() => setShowModal(true)}
+          <button type="button" onClick={() => setShowModal(true)}
             style={{
               fontFamily: 'var(--font-body)', padding: '9px 18px',
               background: 'rgba(196,20,40,0.18)', border: '1px solid rgba(196,20,40,0.4)',
-              borderRadius: 8, color: 'var(--text)', fontSize: 11,
+              borderRadius: 8, color: 'var(--text)', fontSize: 12,
               letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
-              transition: 'all 0.15s',
+              transition: 'background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s, transform 0.15s',
             }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(196,20,40,0.28)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(196,20,40,0.18)')}
@@ -763,14 +810,14 @@ export default function CodesPage() {
         </div>
 
         {loading ? (
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(254,240,244,0.3)', textAlign: 'center', paddingTop: 60, letterSpacing: '0.1em' }}>loading…</div>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(254,240,244,0.3)', textAlign: 'center', paddingTop: 60, letterSpacing: '0.1em' }}>loading…</div>
         ) : codes.length === 0 ? (
           <div style={{
             background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(196,20,40,0.2)',
             borderRadius: 12, padding: '48px 24px', textAlign: 'center',
           }}>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(254,240,244,0.25)', letterSpacing: '0.08em' }}>no codes yet</div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.15)', marginTop: 6 }}>create your first redeem code above</div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(254,240,244,0.25)', letterSpacing: '0.08em' }}>no codes yet</div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(254,240,244,0.15)', marginTop: 6 }}>create your first redeem code above</div>
           </div>
         ) : (
           <>
@@ -783,7 +830,7 @@ export default function CodesPage() {
                 else if (f === 'link') count = codes.filter(c => c.rewardType === 'link').length
                 else if (f === 'image') count = codes.filter(c => c.rewardType === 'image').length
                 return (
-                  <button
+                  <button type="button"
                     key={f}
                     onClick={() => setActiveFilter(f)}
                     style={{
@@ -791,10 +838,10 @@ export default function CodesPage() {
                       border: `1px solid ${activeFilter === f ? 'rgba(196,20,40,0.4)' : 'rgba(255,255,255,0.08)'}`,
                       background: activeFilter === f ? 'rgba(196,20,40,0.12)' : 'transparent',
                       color: activeFilter === f ? 'var(--text)' : 'var(--text-muted)',
-                      fontFamily: 'var(--font-body)', fontSize: 9, cursor: 'pointer', letterSpacing: '0.08em',
+                      fontFamily: 'var(--font-body)', fontSize: 12, cursor: 'pointer', letterSpacing: '0.08em',
                     }}
                   >
-                    {f === 'todos' ? `todos (${count})` : f}
+                    {f === 'todos' ? `all (${count})` : f}
                   </button>
                 )
               })}
@@ -807,7 +854,10 @@ export default function CodesPage() {
                 return (
                   <div
                     key={code.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setDetailCode(code)}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setDetailCode(code) }}
                     style={{
                       border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10,
                       overflow: 'hidden', background: 'rgba(12,0,16,0.8)',
@@ -831,8 +881,8 @@ export default function CodesPage() {
                             width: 88, height: 44, background: code.scratchCardColor || '#2a1a2e',
                             borderRadius: 4, border: '1px solid rgba(196,20,40,0.3)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 9, color: 'rgba(196,20,40,0.6)', letterSpacing: '0.08em',
-                          }}>RASCA</div>
+                            fontSize: 12, color: 'rgba(196,20,40,0.6)', letterSpacing: '0.08em',
+                          }}>SCRATCH</div>
                         : <span style={{ fontSize: 28, opacity: 0.6 }}>🔗</span>
                       }
                     </div>
@@ -840,17 +890,17 @@ export default function CodesPage() {
                     {/* Info */}
                     <div style={{ padding: '10px 12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                        <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {code.code}
                         </span>
                         <Badge type={code.rewardType} used={isExhausted} />
                       </div>
-                      <div style={{ display: 'flex', gap: 10, fontSize: 8, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
+                      <div style={{ display: 'flex', gap: 10, fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
                         {code.maxUses == null
-                          ? <span>∞ ilimitado</span>
+                          ? <span>∞ unlimited</span>
                           : code.maxUses === 1
-                          ? <span>uso único</span>
-                          : <span>{code.useCount ?? 0} / {code.maxUses} usos</span>
+                          ? <span>single use</span>
+                          : <span>{code.useCount ?? 0} / {code.maxUses} uses</span>
                         }
                         <span>{relativeTime(code.createdAt)}</span>
                       </div>
@@ -869,13 +919,13 @@ export default function CodesPage() {
 
                     {/* Botón eliminar dentro de la card (opcional) */}
                     <div style={{ padding: '6px 12px 12px', display: 'flex', justifyContent: 'flex-end' }}>
-                      <button
+                      <button type="button"
                         onClick={(e) => { e.stopPropagation(); handleDelete(code.id) }}
                         disabled={deleting === code.id}
                         style={{
                           background: 'none', border: '1px solid rgba(255,255,255,0.06)',
                           borderRadius: 6, color: 'rgba(254,240,244,0.25)', cursor: 'pointer',
-                          padding: '4px 8px', fontSize: 11, transition: 'all 0.15s',
+                          padding: '4px 8px', fontSize: 12, transition: 'background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s, transform 0.15s',
                         }}
                         onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(196,20,40,0.4)'; e.currentTarget.style.color = 'var(--primary)' }}
                         onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(254,240,244,0.25)' }}
@@ -891,17 +941,17 @@ export default function CodesPage() {
             {/* Footer con stats */}
             <div style={{
               display: 'flex', gap: 20, marginTop: 14, paddingTop: 12,
-              borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: 9, color: 'var(--text-muted)',
+              borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: 12, color: 'var(--text-muted)',
             }}>
               <span>Total: <b style={{ color: 'var(--text)' }}>{codes.length}</b></span>
-              <span>Activos: <b style={{ color: '#4ade80' }}>{activeCount}</b></span>
-              <span>Agotados: <b style={{ color: 'var(--text)' }}>{usedCount}</b></span>
+              <span>Active: <b style={{ color: '#4ade80' }}>{activeCount}</b></span>
+              <span>Exhausted: <b style={{ color: 'var(--text)' }}>{usedCount}</b></span>
               <span style={{ marginLeft: 'auto' }}>
-                <button onClick={exportCodes} style={{
+                <button type="button" onClick={exportCodes} style={{
                   background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6,
-                  padding: '4px 10px', color: 'rgba(254,240,244,0.6)', fontSize: 9,
+                  padding: '4px 10px', color: 'rgba(254,240,244,0.6)', fontSize: 12,
                   fontFamily: 'var(--font-body)', cursor: 'pointer', letterSpacing: '0.08em',
-                }}>exportar CSV</button>
+                }}>export CSV</button>
               </span>
             </div>
           </>

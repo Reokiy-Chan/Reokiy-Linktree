@@ -11,6 +11,12 @@ const FIELD: React.CSSProperties = {
   outline: 'none', letterSpacing: '0.05em', transition: 'border-color 0.2s',
 }
 
+const TAB_STYLE: React.CSSProperties = {
+  flex: 1, padding: '7px 0', borderRadius: 7, border: 'none', cursor: 'pointer',
+  fontFamily: 'var(--font-body)', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase',
+  transition: 'background 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s',
+}
+
 // ─── First-login setup modal (solo contraseña) ───────────────────────────────
 
 function SetupModal({ name, onDone }: { name: string; onDone: () => void }) {
@@ -50,7 +56,7 @@ function SetupModal({ name, onDone }: { name: string; onDone: () => void }) {
     }}>
       <div style={{
         width: '100%', maxWidth: 380, background: '#0a0010', border: '1px solid rgba(196,20,40,0.3)',
-        borderRadius: 20, padding: 30, animation: 'sm-pop 0.5s cubic-bezier(0.34,1.56,0.64,1)',
+        borderRadius: 20, padding: 30, animation: 'sm-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
         boxShadow: '0 0 60px rgba(196,20,40,0.15)',
       }}>
         {done ? (
@@ -59,43 +65,43 @@ function SetupModal({ name, onDone }: { name: string; onDone: () => void }) {
               width: 60, height: 60, borderRadius: '50%', margin: '0 auto 16px',
               background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: '#4ade80',
-              animation: 'sm-check 0.5s cubic-bezier(0.34,1.56,0.64,1)',
+              animation: 'sm-check 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
             }}>✓</div>
             <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 20, color: 'var(--text)' }}>all set</div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(254,240,244,0.4)', marginTop: 6, letterSpacing: '0.1em' }}>entering the panel…</div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(254,240,244,0.4)', marginTop: 6, letterSpacing: '0.1em' }}>entering the panel…</div>
           </div>
         ) : (
           <>
             <div style={{ textAlign: 'center', marginBottom: 22 }}>
               <div style={{ fontSize: 32, marginBottom: 10, animation: 'sm-float 2.5s ease-in-out infinite' }}>🌙</div>
               <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 22, color: 'var(--text)' }}>welcome, {name}</div>
-              <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', marginTop: 6 }}>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', marginTop: 6 }}>
                 {step === 'choose' ? 'choose how you’ll log in' : 'set a password'}
               </div>
             </div>
 
             {step === 'choose' && (
               <div style={{ display: 'flex', gap: 10, animation: 'sm-rise 0.3s ease' }}>
-                <button onClick={() => { setStep('password'); setError('') }} style={choiceStyle}>
+                <button type="button" onClick={() => { setStep('password'); setError('') }} style={choiceStyle}>
                   <div style={{ fontSize: 24 }}>🔒</div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text)', marginTop: 8 }}>set password</div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(254,240,244,0.35)', marginTop: 3 }}>classic login</div>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text)', marginTop: 8 }}>set password</div>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(254,240,244,0.35)', marginTop: 3 }}>classic login</div>
                 </button>
               </div>
             )}
 
             {step === 'password' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, animation: 'sm-rise 0.3s ease' }}>
-                <input type="password" placeholder="new password" value={password} autoFocus
+                <input type="password" aria-label="new password" placeholder="new password" value={password}
                   onChange={e => { setPassword(e.target.value); setError('') }} style={FIELD} />
-                <input type="password" placeholder="confirm password" value={confirm}
+                <input type="password" aria-label="confirm password" placeholder="confirm password" value={confirm}
                   onChange={e => { setConfirm(e.target.value); setError('') }}
                   onKeyDown={e => { if (e.key === 'Enter') savePassword() }} style={FIELD} />
                 {error && <div style={errStyle}>{error}</div>}
-                <button onClick={savePassword} disabled={saving} style={primaryBtn(saving)}>
+                <button type="button" onClick={savePassword} disabled={saving} style={primaryBtn(saving)}>
                   {saving ? 'saving…' : 'set password →'}
                 </button>
-                <button onClick={() => { setStep('choose'); setError('') }} style={backBtn}>← back</button>
+                <button type="button" onClick={() => { setStep('choose'); setError('') }} style={backBtn}>← back</button>
               </div>
             )}
           </>
@@ -116,18 +122,18 @@ function SetupModal({ name, onDone }: { name: string; onDone: () => void }) {
 const choiceStyle: React.CSSProperties = {
   flex: 1, padding: '18px 8px', borderRadius: 12, cursor: 'pointer',
   background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(196,20,40,0.25)',
-  transition: 'all 0.2s', textAlign: 'center',
+  transition: 'background 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s', textAlign: 'center',
 }
-const errStyle: React.CSSProperties = { fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--primary)', textAlign: 'center', letterSpacing: '0.04em' }
+const errStyle: React.CSSProperties = { fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--primary)', textAlign: 'center', letterSpacing: '0.04em' }
 const backBtn: React.CSSProperties = {
   padding: '9px 0', background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
-  color: 'rgba(254,240,244,0.5)', fontFamily: 'var(--font-body)', fontSize: 10, letterSpacing: '0.08em', cursor: 'pointer', transition: 'all 0.2s',
+  color: 'rgba(254,240,244,0.5)', fontFamily: 'var(--font-body)', fontSize: 12, letterSpacing: '0.08em', cursor: 'pointer', transition: 'background 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s',
 }
 const primaryBtn = (disabled: boolean): React.CSSProperties => ({
   padding: '11px 0', background: disabled ? 'rgba(196,20,40,0.08)' : 'rgba(196,20,40,0.2)',
   border: '1px solid rgba(196,20,40,0.4)', borderRadius: 10,
   color: disabled ? 'var(--text-muted)' : 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 12,
-  letterSpacing: '0.1em', textTransform: 'uppercase', cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
+  letterSpacing: '0.1em', textTransform: 'uppercase', cursor: disabled ? 'not-allowed' : 'pointer', transition: 'background 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s',
 })
 
 // ─── Login page ──────────────────────────────────────────────────────────────
@@ -156,7 +162,7 @@ export default function AdminLogin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.trim().toLowerCase() }),
       })
-      if (!optRes.ok) throw new Error('No se pudieron obtener las opciones de autenticación')
+      if (!optRes.ok) throw new Error('Could not get authentication options')
       const { _token, ...options } = await optRes.json()
 
       setWebauthnState('waiting')
@@ -169,13 +175,13 @@ export default function AdminLogin() {
         body: JSON.stringify({ ...assertion, _token }),
       })
       const data = await verRes.json()
-      if (!verRes.ok) throw new Error(data.error ?? 'Verificación fallida')
+      if (!verRes.ok) throw new Error(data.error ?? 'Verification failed')
 
       window.location.replace('/admin')
     } catch (e: unknown) {
       const msg = (e as Error).message
       if (msg.includes('cancelled') || msg.includes('NotAllowedError')) {
-        setWebauthnError('Operación cancelada. Pulsa el botón del Flipper cuando parpadee.')
+        setWebauthnError('Operation cancelled. Press the Flipper button when it blinks.')
       } else {
         setWebauthnError(msg)
       }
@@ -203,12 +209,6 @@ export default function AdminLogin() {
     }
   }
 
-  const TAB_STYLE: React.CSSProperties = {
-    flex: 1, padding: '7px 0', borderRadius: 7, border: 'none', cursor: 'pointer',
-    fontFamily: 'var(--font-body)', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase',
-    transition: 'all 0.2s',
-  }
-
   return (
     <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 20 }}>
       <div key={shake} style={{
@@ -220,12 +220,12 @@ export default function AdminLogin() {
         <div style={{ textAlign: 'center' }}>
           <img src="/images/logo.png" alt="reokiy" style={{ width: 48, height: 48, borderRadius: '50%', marginBottom: 12, objectFit: 'cover' }} />
           <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 22, color: 'var(--text)', marginBottom: 4 }}>control panel</div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>reokiy • admin</div>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>reokiy • admin</div>
         </div>
 
         {/* Mode switch: solo password y webauthn */}
         <div style={{ width: '100%', display: 'flex', background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 3 }}>
-          <button
+          <button type="button"
             onClick={() => { setMode('password'); setError(''); setWebauthnState('idle'); setWebauthnError('') }}
             style={{
               ...TAB_STYLE,
@@ -235,7 +235,7 @@ export default function AdminLogin() {
           >
             🔒 password
           </button>
-          <button
+          <button type="button"
             onClick={() => { setMode('webauthn'); setError(''); setWebauthnState('idle'); setWebauthnError('') }}
             style={{
               ...TAB_STYLE,
@@ -243,18 +243,18 @@ export default function AdminLogin() {
               color: mode === 'webauthn' ? 'var(--text)' : 'rgba(254,240,244,0.4)',
             }}
           >
-            llave U2F
+            U2F key
           </button>
         </div>
 
         {mode !== 'webauthn' ? (
           <form onSubmit={handleLogin} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input placeholder="username" value={username} autoComplete="username"
+            <input aria-label="username" placeholder="username" value={username} autoComplete="username"
               onChange={e => setUsername(e.target.value)} style={FIELD}
               onFocus={e => (e.currentTarget.style.borderColor = 'rgba(196,20,40,0.5)')}
               onBlur={e => (e.currentTarget.style.borderColor = 'var(--glass-border)')} />
 
-            <input type="password" placeholder="password" value={password} autoComplete="current-password"
+            <input type="password" aria-label="password" placeholder="password" value={password} autoComplete="current-password"
               onChange={e => setPassword(e.target.value)} style={FIELD}
               onFocus={e => (e.currentTarget.style.borderColor = 'rgba(196,20,40,0.5)')}
               onBlur={e => (e.currentTarget.style.borderColor = 'var(--glass-border)')} />
@@ -268,7 +268,7 @@ export default function AdminLogin() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
             <div>
-              <label style={{ fontSize: 9, letterSpacing: '0.1em', color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+              <label style={{ fontSize: 12, letterSpacing: '0.1em', color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
                 USERNAME
               </label>
               <input
@@ -284,47 +284,47 @@ export default function AdminLogin() {
               background: 'rgba(255,90,20,0.06)', border: '1px solid rgba(255,90,20,0.2)',
               borderRadius: 10, padding: '12px 14px',
             }}>
-              <div style={{ fontSize: 9, color: 'rgba(255,130,60,0.9)', letterSpacing: '0.12em', marginBottom: 8 }}>
+              <div style={{ fontSize: 12, color: 'rgba(255,130,60,0.9)', letterSpacing: '0.12em', marginBottom: 8 }}>
                 FLIPPER ZERO — U2F
               </div>
               {[
-                'Conecta el Flipper por USB al PC.',
-                'En el Flipper: Apps → USB → U2F. Verás "Ready".',
-                'Pulsa el botón de abajo para iniciar.',
-                'Cuando el Flipper parpadee, pulsa su botón central.',
+                'Connect the Flipper via USB to the PC.',
+                'On the Flipper: Apps → USB → U2F. You\'ll see "Ready".',
+                'Press the button below to start.',
+                'When the Flipper blinks, press its center button.',
               ].map((step, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5, alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: 8, color: 'rgba(196,20,40,0.7)', width: 14, flexShrink: 0, marginTop: 1 }}>
+                  <span style={{ fontSize: 12, color: 'rgba(196,20,40,0.7)', width: 14, flexShrink: 0, marginTop: 1 }}>
                     {i + 1}.
                   </span>
-                  <span style={{ fontSize: 9, color: 'rgba(254,240,244,0.6)', lineHeight: 1.5 }}>{step}</span>
+                  <span style={{ fontSize: 12, color: 'rgba(254,240,244,0.6)', lineHeight: 1.5 }}>{step}</span>
                 </div>
               ))}
             </div>
 
             {webauthnError && (
-              <div style={{ fontSize: 10, color: '#f87171', textAlign: 'center' }}>{webauthnError}</div>
+              <div style={{ fontSize: 12, color: '#f87171', textAlign: 'center' }}>{webauthnError}</div>
             )}
 
-            <button
+            <button type="button"
               onClick={loginWithWebAuthn}
               disabled={webauthnState === 'waiting' || webauthnState === 'verifying' || !username.trim()}
               style={{
                 width: '100%', padding: '13px 0', borderRadius: 10, border: 'none',
                 background: webauthnState === 'waiting' ? 'rgba(196,20,40,0.5)' : 'var(--primary)',
-                color: '#fff', fontFamily: 'var(--font-body)', fontSize: 11,
-                letterSpacing: '0.1em', cursor: 'pointer', transition: 'all 0.2s',
+                color: '#fff', fontFamily: 'var(--font-body)', fontSize: 12,
+                letterSpacing: '0.1em', cursor: 'pointer', transition: 'background 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s',
                 opacity: (!username.trim()) ? 0.4 : 1,
               }}
             >
-              {webauthnState === 'waiting' && '⏳ esperando Flipper…'}
-              {webauthnState === 'verifying' && '✓ verificando…'}
-              {(webauthnState === 'idle' || webauthnState === 'error') && 'iniciar sesión con U2F'}
+              {webauthnState === 'waiting' && '⏳ waiting for Flipper…'}
+              {webauthnState === 'verifying' && '✓ verifying…'}
+              {(webauthnState === 'idle' || webauthnState === 'error') && 'sign in with U2F'}
             </button>
           </div>
         )}
 
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.2)', letterSpacing: '0.08em', textAlign: 'center' }}>
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(254,240,244,0.2)', letterSpacing: '0.08em', textAlign: 'center' }}>
           owner logs in as <span style={{ color: 'rgba(254,240,244,0.4)' }}>root</span>
         </div>
       </div>

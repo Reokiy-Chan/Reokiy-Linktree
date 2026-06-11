@@ -3,6 +3,8 @@ import { getSession } from '@/app/lib/auth'
 import path from 'path'
 import { writeFileSync, mkdirSync, existsSync } from 'fs'
 
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif']
+
 export async function POST(req: NextRequest) {
   const session = await getSession(req)
   if (!session || session.setup) {
@@ -14,8 +16,7 @@ export async function POST(req: NextRequest) {
 
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
-  const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif']
-  if (!allowed.includes(file.type)) {
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
     return NextResponse.json({ error: 'Invalid file type. Use JPEG, PNG, GIF, WEBP or AVIF.' }, { status: 400 })
   }
   if (file.size > 10 * 1024 * 1024) {

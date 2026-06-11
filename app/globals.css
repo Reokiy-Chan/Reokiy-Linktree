@@ -310,3 +310,29 @@ body::before {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.75); }
 }
+
+.alert-marquee {
+  display: flex;
+  white-space: nowrap;
+  animation: alert-scroll 20s linear infinite;
+  font-family: var(--font-body);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+}
+.alert-maintenance { color: #fbbf24; }
+.alert-attack { color: #f87171; }
+
+@keyframes alert-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@media (max-width: 768px) {
+  .live-grid { grid-template-columns: 1fr !important; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .admin-main { padding: 40px 14px 40px !important; }
+}
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr 1fr !important; }
+  .enter-row { flex-direction: column !important; }
+}

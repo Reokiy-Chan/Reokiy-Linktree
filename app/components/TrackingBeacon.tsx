@@ -7,7 +7,7 @@ export default function TrackingBeacon() {
   const pathname = usePathname()
   const lastTracked = useRef('')
   const sessionIdRef = useRef<string | null>(null)
-  const pageStartRef = useRef<number>(Date.now())
+  const pageStartRef = useRef(0)
 
   // Track page view
   useEffect(() => {

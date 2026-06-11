@@ -18,7 +18,7 @@ export interface PresenceEntry {
 
 // A session is "online" if it sent a heartbeat within this window.
 // The client heartbeats every 15s, so 40s tolerates two missed beats.
-export const ONLINE_TTL = 40_000
+const ONLINE_TTL = 40_000
 // Entries older than this get pruned from storage entirely.
 const PRUNE_TTL = 10 * 60_000
 

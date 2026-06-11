@@ -35,16 +35,21 @@ function StatPill({ label, value, accent }: { label: string; value: string | num
       background: 'rgba(255,255,255,0.028)', border: `1px solid ${accent ? `${accent}40` : 'rgba(196,20,40,0.18)'}`,
       borderRadius: 10, padding: '12px 18px', flex: 1, minWidth: 120,
     }}>
-      <div style={{ ...S, fontSize: 8, letterSpacing: '0.16em', textTransform: 'uppercase', color: accent ?? 'rgba(196,20,40,0.65)', marginBottom: 6 }}>{label}</div>
+      <div style={{ ...S, fontSize: 12, letterSpacing: '0.16em', textTransform: 'uppercase', color: accent ?? 'rgba(196,20,40,0.65)', marginBottom: 6 }}>{label}</div>
       <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: accent ?? 'var(--text)', lineHeight: 1 }}>{value}</div>
     </div>
   )
 }
 
+function ago(ts: number): string {
+  const s = Math.round((Date.now() - ts) / 1000)
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m`
+}
+
 const FEED_META: Record<FeedItem['kind'], { color: string; icon: string; word: string }> = {
-  connect:    { color: '#4ade80', icon: '▲', word: 'connected' },
+  connect: { color: '#4ade80', icon: '▲', word: 'connected' },
   disconnect: { color: '#f87171', icon: '▼', word: 'disconnected' },
-  visit:      { color: 'var(--primary)', icon: '◆', word: 'pageview' },
+  visit: { color: 'var(--primary)', icon: '◆', word: 'pageview' },
 }
 
 export default function LivePage() {
@@ -86,7 +91,7 @@ export default function LivePage() {
         if (seenRef.current.size > 600) {
           seenRef.current = new Set([...seenRef.current].slice(-300))
         }
-      } catch {}
+      } catch { }
     }
     es.onerror = () => {
       if (es.readyState === EventSource.CLOSED) router.replace('/admin/login')
@@ -94,91 +99,88 @@ export default function LivePage() {
     return () => es.close()
   }, [router])
 
-  const ago = (ts: number) => {
-    const s = Math.round((Date.now() - ts) / 1000)
-    return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m`
-  }
-
   return (
     <>
       <div style={{ marginBottom: 22 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: 'var(--text)', margin: 0 }}>live</h1>
-        <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 4 }}>
+        <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 4 }}>
           real-time activity
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 14, marginBottom: 14 }} className="live-grid">
-        <div style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(196,20,40,0.15)', borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
-          <div style={{ ...S, fontSize: 8, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', padding: '14px 16px 0' }}>
-            live requests
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'absolute', top: 14, right: 16, zIndex: 2 }}>
+      <div style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(196,20,40,0.18)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
+          <span style={{ ...S, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)' }}>live map</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px #4ade80', animation: 'lp 2s ease-in-out infinite' }} />
-              <span style={{ ...S, fontSize: 9, color: '#4ade80', letterSpacing: '0.1em' }}>{online.length} ONLINE</span>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 5px #4ade80', animation: 'lp 2s ease-in-out infinite' }} />
+              <span style={{ ...S, fontSize: 11, color: '#4ade80', letterSpacing: '0.1em' }}>{online.length} online</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--primary)', boxShadow: '0 0 6px var(--primary)', animation: 'lp 2s ease-in-out infinite' }} />
-              <span style={{ ...S, fontSize: 9, color: 'var(--primary)', letterSpacing: '0.1em' }}>LIVE</span>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--primary)', animation: 'lp 2s ease-in-out infinite' }} />
+              <span style={{ ...S, fontSize: 11, color: 'var(--primary)', letterSpacing: '0.1em' }}>live</span>
             </div>
           </div>
-          <WorldMapV2 height={380} showControls liveVisits={liveVisits} online={online} liveEvents={events} />
         </div>
+        {/* Mapa — los controles zoom y toggles van dentro de WorldMapV2 con showControls */}
+        <WorldMapV2 height={380} showControls liveVisits={liveVisits} online={online} liveEvents={events} />
+      </div>
 
-        <div style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(196,20,40,0.15)', borderRadius: 12, padding: '14px 16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ ...S, fontSize: 8, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', marginBottom: 12 }}>live feed</div>
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {feed.length === 0 ? (
-              <div style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.2)', fontStyle: 'italic' }}>waiting for visitors…</div>
-            ) : feed.map((item, i) => {
-              const meta = FEED_META[item.kind]
-              return (
-                <div key={item.key} style={{
-                  padding: '7px 0',
-                  borderBottom: i < feed.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                  animation: i === 0 ? 'fi 0.3s ease' : 'none',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
-                    <span style={{ ...S, fontSize: 8.5, color: meta.color, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
-                      {meta.icon} {meta.word}
-                    </span>
-                    <span style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.28)' }}>{ago(item.ts)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 1 }}>
-                    <span style={{ ...S, fontSize: 10, color: 'var(--text)' }}>{item.label}</span>
-                    <span style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.35)' }}>{item.page}</span>
-                  </div>
+      <div style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(196,20,40,0.15)', borderRadius: 12, padding: '14px 16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ ...S, fontSize: 12, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', marginBottom: 12 }}>live feed</div>
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {feed.length === 0 ? (
+            <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)', fontStyle: 'italic' }}>waiting for visitors…</div>
+          ) : feed.map((item, i) => {
+            const meta = FEED_META[item.kind]
+            return (
+              <div key={item.key} style={{
+                padding: '7px 0',
+                borderBottom: i < feed.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                animation: i === 0 ? 'fi 0.3s ease' : 'none',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
+                  <span style={{ ...S, fontSize: 12, color: meta.color, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+                    {meta.icon} {meta.word}
+                  </span>
+                  <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.28)' }}>{ago(item.ts)}</span>
                 </div>
-              )
-            })}
-          </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 1 }}>
+                  <span style={{ ...S, fontSize: 12, color: 'var(--text)' }}>{item.label}</span>
+                  <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.35)' }}>{item.page}</span>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
       {/* Online sessions strip */}
-      {online.length > 0 && (
-        <div style={{ background: 'rgba(74,222,128,0.03)', border: '1px solid rgba(74,222,128,0.15)', borderRadius: 12, padding: '12px 16px', marginBottom: 14 }}>
-          <div style={{ ...S, fontSize: 8, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(74,222,128,0.6)', marginBottom: 10 }}>
-            online now — {online.length} visitor{online.length !== 1 ? 's' : ''}
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {online.map(s => (
-              <div key={s.sessionId} style={{
-                ...S, fontSize: 9, padding: '4px 12px', borderRadius: 20,
-                background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)',
-                color: 'rgba(254,240,244,0.7)', display: 'flex', alignItems: 'center', gap: 6,
-              }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 5px #4ade80', display: 'inline-block' }} />
-                {s.city || s.country || 'unknown'}
-                <span style={{ color: 'rgba(254,240,244,0.3)' }}>·</span>
-                <span style={{ color: 'rgba(254,240,244,0.4)' }}>{s.page}</span>
-                <span style={{ color: 'rgba(74,222,128,0.5)', fontSize: 8 }}>{ago(s.connectedAt)}</span>
-              </div>
-            ))}
-          </div>
+  {
+    online.length > 0 && (
+      <div style={{ background: 'rgba(74,222,128,0.03)', border: '1px solid rgba(74,222,128,0.15)', borderRadius: 12, padding: '12px 16px', marginBottom: 14 }}>
+        <div style={{ ...S, fontSize: 12, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(74,222,128,0.6)', marginBottom: 10 }}>
+          online now — {online.length} visitor{online.length !== 1 ? 's' : ''}
         </div>
-      )}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {online.map(s => (
+            <div key={s.sessionId} style={{
+              ...S, fontSize: 12, padding: '4px 12px', borderRadius: 20,
+              background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)',
+              color: 'rgba(254,240,244,0.7)', display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 5px #4ade80', display: 'inline-block' }} />
+              {s.city || s.country || 'unknown'}
+              <span style={{ color: 'rgba(254,240,244,0.3)' }}>·</span>
+              <span style={{ color: 'rgba(254,240,244,0.4)' }}>{s.page}</span>
+              <span style={{ color: 'rgba(74,222,128,0.5)', fontSize: 12 }}>{ago(s.connectedAt)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <StatPill label="Online now" value={online.length} accent="#4ade80" />

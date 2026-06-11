@@ -40,6 +40,9 @@ export interface Raffle {
   pickedAt?: string
   // Ban list (admin can exclude participants)
   bannedUsernames?: string[]
+  // One entry per IP
+  onePerIp?: boolean
+  entryIps?: string[]
   createdAt: string
 }
 
@@ -125,13 +128,12 @@ export async function listRaffles(): Promise<Raffle[]> {
     const raw = await kv.hgetall(KV_KEY)
     if (!raw) return []
     return Object.values(raw)
-      .map(v => safeParse<Raffle>(v))
-      .filter(Boolean) as Raffle[]
+      .flatMap(v => { const r = safeParse<Raffle>(v); return r ? [r] : [] })
   }
   return fsRead()
 }
 
-export async function getRaffle(id: string): Promise<Raffle | null> {
+async function getRaffle(id: string): Promise<Raffle | null> {
   if (USE_KV) {
     const { Redis } = await import('@upstash/redis')
     const kv = Redis.fromEnv()
@@ -191,12 +193,15 @@ export async function deleteRaffle(id: string): Promise<void> {
   fsWrite(fsRead().filter(r => r.id !== id))
 }
 
-export async function enterRaffle(id: string, discordUsername: string): Promise<{ ok: boolean; error?: string }> {
+export async function enterRaffle(id: string, discordUsername: string, ip?: string): Promise<{ ok: boolean; error?: string }> {
   const raffle = await getRaffle(id)
   if (!raffle) return { ok: false, error: 'Giveaway not found' }
   if (raffle.status !== 'active') return { ok: false, error: 'This giveaway has already ended' }
   if (raffle.entries.some(e => e.discordUsername.toLowerCase() === discordUsername.toLowerCase())) {
     return { ok: false, error: 'You are already in this giveaway' }
+  }
+  if (raffle.onePerIp && ip && (raffle.entryIps ?? []).includes(ip)) {
+    return { ok: false, error: 'Only one entry per IP address is allowed' }
   }
   const banned = (raffle.bannedUsernames ?? []).map(b => b.toLowerCase())
   if (banned.includes(discordUsername.toLowerCase())) {
@@ -207,7 +212,9 @@ export async function enterRaffle(id: string, discordUsername: string): Promise<
     return { ok: false, error: 'No puedes participar en este giveaway.' }
   }
   const newEntry: RaffleEntry = { discordUsername, enteredAt: new Date().toISOString() }
-  await updateRaffle(id, { entries: [...raffle.entries, newEntry] })
+  const patch: Partial<Raffle> = { entries: [...raffle.entries, newEntry] }
+  if (raffle.onePerIp && ip) patch.entryIps = [...(raffle.entryIps ?? []), ip]
+  await updateRaffle(id, patch)
   return { ok: true }
 }
 

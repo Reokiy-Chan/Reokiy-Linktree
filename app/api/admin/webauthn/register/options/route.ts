@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     rpName: 'reokiy admin',
     rpID,
     userName: user.username,
-    userID: new TextEncoder().encode(user.id),
+    userID: Buffer.from(user.id),
     attestationType: 'none',
     // Excluir credenciales ya registradas para evitar duplicados
     excludeCredentials: (user.webauthnCredentials ?? []).map(c => ({

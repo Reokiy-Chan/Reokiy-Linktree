@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/app/lib/auth'
 import { readSettings, updateSettings, type SiteSettings } from '@/app/lib/settings'
+import { appendAudit } from '@/app/lib/audit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -33,7 +34,14 @@ export async function PATCH(req: NextRequest) {
     if (typeof body.redeemEnabled === 'boolean') patch.redeemEnabled = body.redeemEnabled
     if (typeof body.rafflesEnabled === 'boolean') patch.rafflesEnabled = body.rafflesEnabled
     if (typeof body.trackingEnabled === 'boolean') patch.trackingEnabled = body.trackingEnabled
+    const session2 = await getSession(req)
     const settings = await updateSettings(patch)
+    await appendAudit({
+      action: 'settings.update',
+      actorId: session2?.uid ?? 'unknown', actorName: session2?.u ?? 'unknown', actorUsername: session2?.u ?? 'unknown',
+      target: Object.keys(patch).join(', '),
+      detail: JSON.stringify(patch),
+    }).catch(() => {})
     return NextResponse.json({ settings })
   } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 })
