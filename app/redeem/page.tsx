@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 
 type RewardType = 'link' | 'text' | 'image' | 'fansly'
 type GiftPattern = 'none' | 'dots' | 'stripes' | 'stars' | 'hearts' | 'checks' | 'diamonds' | 'waves' | 'zigzag' | 'custom'
+type GiftStyle = 'modern' | 'legacy'
+type ScratchStyle = 'classic' | 'lottery'
 type ScratchDifficulty = 'easy' | 'normal' | 'hard' | 'very_hard'
 
 interface Reward {
@@ -11,12 +13,14 @@ interface Reward {
   rewardContent: string
   rewardTitle: string | null
   giftAnimation: boolean
+  giftStyle?: GiftStyle
   giftBoxColor: string
   giftRibbonColor: string
   giftPattern?: GiftPattern
   giftPatternColor?: string
   giftPatternImage?: string
   scratchCard?: boolean
+  scratchStyle?: ScratchStyle
   scratchCardColor?: string
   scratchCardLabel?: string
   scratchTextColor?: string
@@ -87,6 +91,7 @@ function ScratchCard({
   height = 160,
   revealThreshold = 55,
   difficulty = 'normal',
+  variant = 'lottery',
 }: {
   code: string
   overlayColor?: string
@@ -97,7 +102,15 @@ function ScratchCard({
   height?: number
   revealThreshold?: number
   difficulty?: ScratchDifficulty
+  variant?: ScratchStyle
 }) {
+  // Stable 4-digit "serial number" derived from the code, for the ticket look
+  const serial = (() => {
+    let n = 0
+    for (let i = 0; i < code.length; i++) n = (n * 31 + code.charCodeAt(i)) >>> 0
+    return String(n % 10000).padStart(4, '0')
+  })()
+  const isLottery = variant === 'lottery'
   const canvasRef  = useRef<HTMLCanvasElement>(null)
   const [revealed, setRevealed] = useState(false)
   const [revealing, setRevealing] = useState(false)   // threshold hit → overlay dissolves
@@ -133,8 +146,50 @@ function ScratchCard({
     const canvas = canvasRef.current; if (!canvas) return
     const ctx = canvas.getContext('2d'); if (!ctx) return
     const w = canvas.width, h = canvas.height
+    ctx.textAlign = 'center'
 
-    // Gradient fill for overlay
+    if (variant === 'lottery') {
+      // ── Metallic gold scratch-off ink (real lottery ticket look) ──────────
+      const grad = ctx.createLinearGradient(0, 0, w, h)
+      grad.addColorStop(0,   '#d9b54a')
+      grad.addColorStop(0.35,'#b8902f')
+      grad.addColorStop(0.5, '#e8cf78')
+      grad.addColorStop(0.65,'#a8821f')
+      grad.addColorStop(1,   '#c9a23a')
+      ctx.fillStyle = grad
+      ctx.fillRect(0, 0, w, h)
+
+      // Brushed diagonal hatching (the "ink" texture)
+      ctx.strokeStyle = 'rgba(120,86,10,0.35)'
+      ctx.lineWidth = 3
+      for (let i = -h; i < w + h; i += 10) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + h, h); ctx.stroke()
+      }
+      ctx.strokeStyle = 'rgba(255,240,180,0.30)'
+      ctx.lineWidth = 1.5
+      for (let i = -h; i < w + h; i += 10) {
+        ctx.beginPath(); ctx.moveTo(i + 4, 0); ctx.lineTo(i + 4 + h, h); ctx.stroke()
+      }
+
+      // Speckle grain
+      ctx.fillStyle = 'rgba(80,56,4,0.18)'
+      for (let i = 0; i < (w * h) / 900; i++) {
+        ctx.beginPath(); ctx.arc(Math.random() * w, Math.random() * h, Math.random() * 1.4, 0, Math.PI * 2); ctx.fill()
+      }
+
+      // Embossed "SCRATCH HERE"
+      ctx.font = `bold ${Math.min(20, Math.floor(h / 7))}px Space Mono, monospace`
+      ctx.fillStyle = 'rgba(255,245,200,0.55)'
+      ctx.fillText('SCRATCH HERE', w / 2, h / 2 - 4)
+      ctx.fillStyle = 'rgba(90,64,6,0.5)'
+      ctx.fillText('SCRATCH HERE', w / 2 + 1.5, h / 2 - 2.5)
+      ctx.font = `${Math.min(11, Math.floor(h / 13))}px Space Mono, monospace`
+      ctx.fillStyle = 'rgba(90,64,6,0.45)'
+      ctx.fillText('🪙 to reveal your prize', w / 2, h / 2 + 18)
+      return
+    }
+
+    // ── Classic dark overlay ───────────────────────────────────────────────
     const grad = ctx.createLinearGradient(0, 0, w, h)
     const { r: or, g: og, b: ob } = hexToRgb(overlayColor)
     grad.addColorStop(0, `rgba(${Math.min(255,or+18)},${Math.min(255,og+18)},${Math.min(255,ob+18)},1)`)
@@ -171,7 +226,6 @@ function ScratchCard({
     const labelColor = textColor || 'rgba(255,255,255,0.6)'
     ctx.fillStyle = labelColor
     ctx.font = `bold ${Math.min(15, Math.floor(h / 10))}px Space Mono, monospace`
-    ctx.textAlign = 'center'
     ctx.shadowBlur = 8
     ctx.shadowColor = 'rgba(255,255,255,0.2)'
     ctx.fillText(topText, w / 2, h / 2 - 10)
@@ -198,7 +252,7 @@ function ScratchCard({
         ctx.fill()
       }
     }
-  }, [overlayColor, label, textColor, height, difficulty, brushRadius])
+  }, [overlayColor, label, textColor, height, difficulty, brushRadius, variant])
 
   useEffect(() => { initCanvas() }, [initCanvas])
 
@@ -289,8 +343,38 @@ function ScratchCard({
       ref={tiltRef}
       onMouseMove={handleTilt}
       onMouseLeave={resetTilt}
-      style={{ position: 'relative', userSelect: 'none', width: '100%', maxWidth: width, transition: 'transform 0.18s ease-out', willChange: 'transform' }}
+      style={{
+        position: 'relative', userSelect: 'none', width: '100%', maxWidth: width,
+        transition: 'transform 0.18s ease-out', willChange: 'transform',
+        ...(isLottery ? {
+          background: 'linear-gradient(160deg, #1a0d20, #100015)',
+          border: '1px solid rgba(212,168,75,0.4)',
+          borderRadius: 16, padding: 8, boxSizing: 'border-box',
+          boxShadow: revealed ? '0 0 36px rgba(212,168,75,0.18)' : '0 8px 30px rgba(0,0,0,0.5)',
+        } : {}),
+      }}
     >
+      {/* Ticket header (lottery only) */}
+      {isLottery && (
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '7px 12px', marginBottom: 8, borderRadius: 10,
+          background: 'linear-gradient(90deg, rgba(196,20,40,0.35), rgba(232,25,92,0.22))',
+          border: '1px solid rgba(212,168,75,0.25)',
+        }}>
+          <span style={{ ...S, fontSize: 9, letterSpacing: '0.18em', color: '#ffe9a8', textShadow: '0 0 8px rgba(255,215,0,0.3)' }}>★ LUCKY CODE ★</span>
+          <span style={{ fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.1em', color: 'rgba(255,233,168,0.75)' }}>N.º {serial}</span>
+        </div>
+      )}
+
+      {/* Perforation notches (lottery only) */}
+      {isLottery && (
+        <>
+          <span style={{ position: 'absolute', left: -7, top: 44, width: 14, height: 14, borderRadius: '50%', background: 'var(--bg)', border: '1px solid rgba(212,168,75,0.3)' }} />
+          <span style={{ position: 'absolute', right: -7, top: 44, width: 14, height: 14, borderRadius: '50%', background: 'var(--bg)', border: '1px solid rgba(212,168,75,0.3)' }} />
+        </>
+      )}
+
       {/* Confetti burst on reveal */}
       {confetti.map(c => (
         <span key={c.id} style={{
@@ -316,7 +400,7 @@ function ScratchCard({
 
       {/* Revealed reward area */}
       <div style={{
-        borderRadius: 14,
+        borderRadius: isLottery ? 10 : 14,
         background: `linear-gradient(135deg, ${revealedBg} 0%, #0d001a 100%)`,
         border: `1px solid ${accentColor}44`,
         padding: `${Math.floor(height * 0.15)}px 20px`,
@@ -364,32 +448,32 @@ function ScratchCard({
         }}>
           {copied ? '✓ copied!' : 'copy code'}
         </button>
-      </div>
 
-      {/* Scratch overlay canvas */}
-      {!revealed && (
-        <canvas
-          ref={canvasRef}
-          width={width * 2}
-          height={height * 2}
-          style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            borderRadius: 14, cursor: 'crosshair', touchAction: 'none',
-            opacity: revealing ? 0 : 1,
-            filter: revealing ? 'blur(6px)' : 'none',
-            transform: revealing ? 'scale(1.04)' : 'scale(1)',
-            transition: 'opacity 0.6s ease, filter 0.6s ease, transform 0.6s ease',
-            pointerEvents: revealing ? 'none' : 'auto',
-          }}
-          onMouseDown={e => { isDrawing.current = true; scratch(getPos(e).x, getPos(e).y) }}
-          onMouseMove={e => { if (isDrawing.current) scratch(getPos(e).x, getPos(e).y) }}
-          onMouseUp={() => { isDrawing.current = false }}
-          onMouseLeave={() => { isDrawing.current = false }}
-          onTouchStart={e => { isDrawing.current = true; scratch(getPos(e).x, getPos(e).y) }}
-          onTouchMove={e => { if (isDrawing.current) scratch(getPos(e).x, getPos(e).y) }}
-          onTouchEnd={() => { isDrawing.current = false }}
-        />
-      )}
+        {/* Scratch overlay canvas — scoped to the reward area */}
+        {!revealed && (
+          <canvas
+            ref={canvasRef}
+            width={width * 2}
+            height={height * 2}
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              borderRadius: isLottery ? 10 : 14, cursor: 'crosshair', touchAction: 'none',
+              opacity: revealing ? 0 : 1,
+              filter: revealing ? 'blur(6px)' : 'none',
+              transform: revealing ? 'scale(1.04)' : 'scale(1)',
+              transition: 'opacity 0.6s ease, filter 0.6s ease, transform 0.6s ease',
+              pointerEvents: revealing ? 'none' : 'auto',
+            }}
+            onMouseDown={e => { isDrawing.current = true; scratch(getPos(e).x, getPos(e).y) }}
+            onMouseMove={e => { if (isDrawing.current) scratch(getPos(e).x, getPos(e).y) }}
+            onMouseUp={() => { isDrawing.current = false }}
+            onMouseLeave={() => { isDrawing.current = false }}
+            onTouchStart={e => { isDrawing.current = true; scratch(getPos(e).x, getPos(e).y) }}
+            onTouchMove={e => { if (isDrawing.current) scratch(getPos(e).x, getPos(e).y) }}
+            onTouchEnd={() => { isDrawing.current = false }}
+          />
+        )}
+      </div>
 
       {/* Progress bar */}
       {!revealed && !revealing && percent > 5 && (
@@ -435,6 +519,7 @@ function StandardReward({ reward }: { reward: Reward }) {
           height={reward.scratchCardHeight ?? 160}
           revealThreshold={reward.scratchRevealThreshold ?? 55}
           difficulty={reward.scratchDifficulty ?? 'normal'}
+          variant={reward.scratchStyle ?? 'lottery'}
         />
       </div>
     )
@@ -482,6 +567,7 @@ function GiftBox({ reward, onOpen }: { reward: Reward; onOpen: () => void }) {
 
   const boxColor    = reward.giftBoxColor ?? '#c41428'
   const ribbonColor = reward.giftRibbonColor ?? '#fef0f4'
+  const giftStyle   = reward.giftStyle ?? 'modern'
   const pattern     = reward.giftPattern ?? 'none'
   const patternColor = reward.giftPatternColor ?? '#ffffff'
   const patternImage = reward.giftPatternImage
@@ -607,6 +693,80 @@ function GiftBox({ reward, onOpen }: { reward: Reward; onOpen: () => void }) {
 
         {/* SVG Gift */}
         <div onClick={handleClick} style={{ display:'inline-block', cursor:phase==='open'?'default':'pointer', position:'relative', animation:phase==='wobble'?'giftWobble 1.4s ease-in-out infinite':phase==='opening'?'giftPop 0.55s ease-out forwards':phase==='open'?'giftFadeOut 0.3s ease-out 0.1s both':'none', filter:phase==='wobble'?`drop-shadow(0 0 18px ${ribbonColor}55) drop-shadow(0 12px 20px rgba(0,0,0,0.5))`:'drop-shadow(0 12px 20px rgba(0,0,0,0.5))' }}>
+          {giftStyle === 'modern' ? (
+          <svg width="190" height="210" viewBox="0 0 190 210" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              {renderPatternDef()}
+              <linearGradient id="m-body" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={boxLight} /><stop offset="55%" stopColor={boxColor} /><stop offset="100%" stopColor={boxDark} />
+              </linearGradient>
+              <linearGradient id="m-lid" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={lighten(boxColor, 55)} /><stop offset="100%" stopColor={boxColor} />
+              </linearGradient>
+              <linearGradient id="m-rib" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor={ribDark} /><stop offset="30%" stopColor={ribLight} /><stop offset="70%" stopColor={ribLight} /><stop offset="100%" stopColor={ribDark} />
+              </linearGradient>
+              <radialGradient id="m-glow" cx="50%" cy="40%" r="60%">
+                <stop offset="0%" stopColor={ribbonColor} stopOpacity="0.35" /><stop offset="100%" stopColor={ribbonColor} stopOpacity="0" />
+              </radialGradient>
+              <filter id="m-soft" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur stdDeviation="3.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+            </defs>
+
+            {/* Floating glow + shadow */}
+            {!isOpening && <ellipse cx="95" cy="118" rx="80" ry="70" fill="url(#m-glow)" />}
+            <ellipse cx="95" cy="200" rx="50" ry="6.5" fill="rgba(0,0,0,0.34)" />
+
+            {/* Box body — rounded, glossy */}
+            <g style={{ transformOrigin:'95px 150px', opacity:isOpening?0.1:1, transition:'opacity 0.4s ease 0.45s' }}>
+              <rect x="26" y="96" width="138" height="100" rx="22" fill="url(#m-body)" />
+              <rect x="26" y="96" width="138" height="100" rx="22" fill={patternFill} opacity="0.6" />
+              {/* top gloss */}
+              <rect x="34" y="104" width="122" height="40" rx="18" fill="rgba(255,255,255,0.14)" />
+              {/* vertical ribbon */}
+              <rect x="80" y="96" width="30" height="100" rx="6" fill="url(#m-rib)" opacity="0.95" />
+              <rect x="84" y="96" width="9" height="100" fill="rgba(255,255,255,0.22)" />
+              {/* horizontal ribbon */}
+              <rect x="26" y="132" width="138" height="26" rx="6" fill="url(#m-rib)" opacity="0.95" />
+              <rect x="26" y="134" width="138" height="7" fill="rgba(255,255,255,0.2)" />
+            </g>
+
+            {/* Lid — flies up on open */}
+            <g style={{ transformOrigin:'95px 86px', animation:isOpening?'mLidFly 0.72s cubic-bezier(0.2,0,0.8,1) forwards':'none' }}>
+              <rect x="18" y="66" width="154" height="34" rx="16" fill="url(#m-lid)" />
+              <rect x="18" y="66" width="154" height="34" rx="16" fill={patternFill} opacity="0.55" />
+              <rect x="26" y="71" width="138" height="13" rx="9" fill="rgba(255,255,255,0.22)" />
+              <rect x="80" y="66" width="30" height="34" fill="url(#m-rib)" opacity="0.95" />
+
+              {/* Soft rounded bow */}
+              <g filter="url(#m-soft)">
+                <path d={`M95,62 C78,40 50,42 52,58 C54,72 80,66 95,62 Z`} fill={ribbonColor} />
+                <path d={`M95,62 C112,40 140,42 138,58 C136,72 110,66 95,62 Z`} fill={ribbonColor} />
+                <path d={`M95,62 C84,46 64,46 56,56 C70,56 86,58 95,62 Z`} fill={ribLight} opacity="0.6" />
+                <path d={`M95,62 C106,46 126,46 134,56 C120,56 104,58 95,62 Z`} fill={ribLight} opacity="0.6" />
+                {/* ribbon tails */}
+                <path d="M91,64 C86,80 82,92 86,100 L96,98 C92,88 93,76 96,66 Z" fill={ribDark} opacity="0.85" />
+                <path d="M99,64 C104,80 108,92 104,100 L94,98 C98,88 97,76 94,66 Z" fill={ribbonColor} />
+                {/* center knot */}
+                <ellipse cx="95" cy="60" rx="13" ry="12" fill={ribbonColor} />
+                <ellipse cx="91" cy="56" rx="6" ry="5" fill={ribLight} opacity="0.8" />
+                <ellipse cx="93" cy="55" rx="3" ry="2.4" fill="rgba(255,255,255,0.35)" />
+              </g>
+            </g>
+
+            {/* Sparkles on idle wobble */}
+            {phase === 'wobble' && (
+              <>
+                <circle cx="30" cy="46" r="3.2" fill={ribbonColor} opacity="0.8" style={{ animation:'sparkle 1.8s ease-in-out infinite 0s' }} />
+                <circle cx="166" cy="40" r="2.6" fill={ribLight} opacity="0.7" style={{ animation:'sparkle 1.8s ease-in-out infinite 0.5s' }} />
+                <circle cx="172" cy="84" r="3" fill={boxLight} opacity="0.85" style={{ animation:'sparkle 1.8s ease-in-out infinite 0.9s' }} />
+                <path d="M22,86 L24,81 L26,86 L31,88 L26,90 L24,95 L22,90 L17,88 Z" fill={ribLight} opacity="0.55" style={{ animation:'sparkle 2.1s ease-in-out infinite 0.3s' }} />
+                <path d="M158,118 L160,114 L162,118 L166,120 L162,122 L160,126 L158,122 L154,120 Z" fill={ribbonColor} opacity="0.5" style={{ animation:'sparkle 2.1s ease-in-out infinite 1.1s' }} />
+              </>
+            )}
+          </svg>
+          ) : (
           <svg width="180" height="210" viewBox="0 0 180 210" xmlns="http://www.w3.org/2000/svg">
             <defs>
               {renderPatternDef()}
@@ -705,6 +865,7 @@ function GiftBox({ reward, onOpen }: { reward: Reward; onOpen: () => void }) {
               )}
             </g>
           </svg>
+          )}
         </div>
       </div>
 
@@ -713,6 +874,7 @@ function GiftBox({ reward, onOpen }: { reward: Reward; onOpen: () => void }) {
         @keyframes giftPop { 0%{transform:scale(1) rotate(0deg)} 30%{transform:scale(1.22) rotate(3deg)} 60%{transform:scale(0.9) rotate(-1.5deg)} 100%{transform:scale(1.05) rotate(0deg)} }
         @keyframes giftFadeOut { from{opacity:1;transform:scale(1.05)} to{opacity:0;transform:scale(0.85) translateY(20px)} }
         @keyframes lidFly { 0%{transform:translateY(0) rotate(0deg) scale(1);opacity:1} 20%{transform:translateY(-18px) rotate(-8deg) scale(1.05);opacity:1} 100%{transform:translateY(-180px) rotate(-32deg) scale(0.7);opacity:0} }
+        @keyframes mLidFly { 0%{transform:translateY(0) rotate(0deg) scale(1);opacity:1} 22%{transform:translateY(-16px) rotate(6deg) scale(1.06);opacity:1} 100%{transform:translateY(-170px) rotate(26deg) scale(0.65);opacity:0} }
         @keyframes sparkle { 0%,100%{opacity:0.15;transform:scale(0.7)} 50%{opacity:1;transform:scale(1.55)} }
         @keyframes flashOut { 0%{opacity:1} 100%{opacity:0;transform:scale(2.5)} }
         @keyframes confetti-0 { to{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0} }

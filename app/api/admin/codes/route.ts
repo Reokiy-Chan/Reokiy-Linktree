@@ -1,24 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { verifyToken } from '@/app/lib/auth'
-import { listCodes, createCode } from '@/app/lib/codes'
+import { getSession } from '@/app/lib/auth'
+import { listCodes, createCode, getCodeByString } from '@/app/lib/codes'
 
-async function auth() {
-  const jar = await cookies()
-  const token = jar.get('admin_session')?.value
-  const secret = process.env.ADMIN_SECRET ?? 'reokiy_secret_change_me'
-  return token && verifyToken(token, secret)
-}
-
-export async function GET() {
-  if (!await auth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function GET(req: NextRequest) {
+  const session = await getSession(req)
+  if (!session || session.setup) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const codes = await listCodes()
   codes.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   return NextResponse.json({ codes })
 }
 
 export async function POST(req: NextRequest) {
-  if (!await auth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getSession(req)
+  if (!session || session.setup) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const body = await req.json()
   const {
     code, label, rewardType, rewardContent, rewardTitle,
@@ -35,13 +30,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  const { getCodeByString } = await import('@/app/lib/codes')
   const existing = await getCodeByString(code)
   if (existing) {
     return NextResponse.json({ error: 'Code already exists' }, { status: 409 })
   }
 
-  // Parse maxUses: null = unlimited, number = finite, undefined = single (1)
   let parsedMaxUses: number | null | undefined = undefined
   if (maxUses === null || maxUses === 'unlimited') {
     parsedMaxUses = null

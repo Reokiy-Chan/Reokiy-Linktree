@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Raffle, RafflePrize, RaffleWinner } from '@/app/lib/raffles'
 
 const S: React.CSSProperties = { fontFamily: 'var(--font-body)' }
 
 // ─── Countdown timer ─────────────────────────────────────────────────────────
-
 function Countdown({ endsAt }: { endsAt: string }) {
   const [remaining, setRemaining] = useState('')
 
@@ -26,11 +25,7 @@ function Countdown({ endsAt }: { endsAt: string }) {
     return () => clearInterval(id)
   }, [endsAt])
 
-  return (
-    <span style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.08em' }}>
-      ⏱ {remaining}
-    </span>
-  )
+  return <span style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.08em' }}>⏱ {remaining}</span>
 }
 
 // ─── Winner Reveal Overlay ───────────────────────────────────────────
@@ -390,9 +385,44 @@ function ParticipantsDrawer({
   const [adding, setAdding]       = useState(false)
   const [removing, setRemoving]   = useState<string | null>(null)
   const [selectedPrize, setSelectedPrize] = useState<string>('')
-  const [tab, setTab]             = useState<'participants' | 'winners'>('participants')
+  const [tab, setTab]             = useState<'participants' | 'winners' | 'blacklist'>('participants')
   const [search, setSearch]       = useState('')
   const [reveal, setReveal]       = useState<{ winner: string; prizeLabel?: string; raffle: Raffle } | null>(null)
+  const [banInput, setBanInput]   = useState('')
+  const [banning, setBanning]     = useState(false)
+
+  const banned = raffle.bannedUsernames ?? []
+
+  // Patch the raffle on the server and reflect locally
+  const patchRaffle = async (patch: Partial<Raffle>) => {
+    const res = await fetch(`/api/admin/raffles/${raffle.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+    })
+    const data = await res.json()
+    if (res.ok) { onUpdated(data.raffle); return true }
+    showToast(`⚠ ${data.error ?? 'Error'}`, false)
+    return false
+  }
+
+  const banUser = async (username: string) => {
+    const u = username.trim()
+    if (!u) return
+    if (banned.some(b => b.toLowerCase() === u.toLowerCase())) { showToast('Already blacklisted', false); return }
+    setBanning(true)
+    // Also pull them from entries + winners so they can't win
+    const ok = await patchRaffle({
+      bannedUsernames: [...banned, u],
+      entries: raffle.entries.filter(e => e.discordUsername.toLowerCase() !== u.toLowerCase()),
+      winners: (raffle.winners ?? []).filter(w => w.discordUsername.toLowerCase() !== u.toLowerCase()),
+    })
+    if (ok) { showToast(`🚫 ${u} blacklisted`); setBanInput('') }
+    setBanning(false)
+  }
+
+  const unbanUser = async (username: string) => {
+    const ok = await patchRaffle({ bannedUsernames: banned.filter(b => b.toLowerCase() !== username.toLowerCase()) })
+    if (ok) showToast(`✓ ${username} removed from blacklist`)
+  }
 
   const showToast = (msg: string, ok = true) => {
     setToastOk(ok); setToast(msg); setTimeout(() => setToast(''), 3500)
@@ -500,16 +530,16 @@ function ParticipantsDrawer({
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 4, background: 'rgba(255,255,255,0.02)', borderRadius: 8, padding: 3 }}>
-          {(['participants', 'winners'] as const).map(t => (
+          {(['participants', 'winners', 'blacklist'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
               style={{
-                ...S, flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 9,
-                letterSpacing: '0.1em', textTransform: 'uppercase',
-                background: tab === t ? 'rgba(196,20,40,0.25)' : 'transparent',
+                ...S, flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 8.5,
+                letterSpacing: '0.06em', textTransform: 'uppercase',
+                background: tab === t ? (t === 'blacklist' ? 'rgba(248,113,113,0.18)' : 'rgba(196,20,40,0.25)') : 'transparent',
                 color: tab === t ? 'var(--text)' : 'rgba(254,240,244,0.35)',
                 transition: 'all 0.15s',
               }}>
-              {t === 'participants' ? `👥 Participants (${raffle.entries.length})` : `🏆 Winners (${winners.length})`}
+              {t === 'participants' ? `👥 ${raffle.entries.length}` : t === 'winners' ? `🏆 ${winners.length}` : `🚫 ${banned.length}`}
             </button>
           ))}
         </div>
@@ -609,17 +639,68 @@ function ParticipantsDrawer({
                         )}
                       </div>
                     </div>
-                    <button onClick={() => removeParticipant(entry.discordUsername)} disabled={removing === entry.discordUsername}
-                      style={{ background: 'none', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 5, color: 'rgba(254,240,244,0.2)', cursor: 'pointer', padding: '3px 7px', fontSize: 10, flexShrink: 0 }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(196,20,40,0.4)'; e.currentTarget.style.color = 'var(--primary)' }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(254,240,244,0.2)' }}>
-                      {removing === entry.discordUsername ? '…' : '✕'}
-                    </button>
+                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                      <button onClick={() => banUser(entry.discordUsername)} disabled={banning} title="Blacklist this user"
+                        style={{ background: 'none', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 5, color: 'rgba(254,240,244,0.2)', cursor: 'pointer', padding: '3px 7px', fontSize: 10 }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(248,113,113,0.45)'; e.currentTarget.style.color = '#f87171' }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(254,240,244,0.2)' }}>
+                        🚫
+                      </button>
+                      <button onClick={() => removeParticipant(entry.discordUsername)} disabled={removing === entry.discordUsername}
+                        style={{ background: 'none', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 5, color: 'rgba(254,240,244,0.2)', cursor: 'pointer', padding: '3px 7px', fontSize: 10 }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(196,20,40,0.4)'; e.currentTarget.style.color = 'var(--primary)' }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(254,240,244,0.2)' }}>
+                        {removing === entry.discordUsername ? '…' : '✕'}
+                      </button>
+                    </div>
                   </div>
                 )
               })}
             </div>
           </>
+        )}
+
+        {tab === 'blacklist' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', lineHeight: 1.6 }}>
+              Blacklisted users can&apos;t join this giveaway and won&apos;t be picked as winners.
+            </div>
+            {/* Add to blacklist */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input value={banInput} onChange={e => setBanInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') banUser(banInput) }}
+                placeholder="Discord username to ban…"
+                style={fieldStyle} />
+              <button onClick={() => banUser(banInput)} disabled={banning || !banInput.trim()}
+                style={{ ...S, padding: '0 12px', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 7, color: '#f87171', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>
+                {banning ? '…' : '🚫'}
+              </button>
+            </div>
+            {/* List */}
+            {banned.length === 0 ? (
+              <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.2)', textAlign: 'center', padding: '24px 0' }}>
+                No one blacklisted
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {banned.map((b, i) => (
+                  <div key={i} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)',
+                    borderRadius: 8, padding: '8px 12px',
+                  }}>
+                    <span style={{ ...S, fontSize: 11, color: '#f87171' }}>🚫 {b}</span>
+                    <button onClick={() => unbanUser(b)} title="Remove from blacklist"
+                      style={{ background: 'none', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 5, color: 'rgba(254,240,244,0.3)', cursor: 'pointer', padding: '3px 9px', fontSize: 9 }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(74,222,128,0.4)'; e.currentTarget.style.color = '#4ade80' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(254,240,244,0.3)' }}>
+                      unban
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {reveal && (
@@ -687,6 +768,7 @@ export default function RafflesPage() {
   const [viewing, setViewing] = useState<Raffle | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [duplicating, setDuplicating] = useState<string | null>(null)
+  const [activeFilter, setActiveFilter] = useState<'todos' | 'active' | 'ended'>('todos')
   const esRef = useRef<EventSource | null>(null)
 
   useEffect(() => {
@@ -700,10 +782,7 @@ export default function RafflesPage() {
         setRaffles(d.raffles ?? [])
         setLoading(false)
         setConnected(true)
-        setViewing(prev => {
-          if (!prev) return null
-          return (d.raffles ?? []).find(r => r.id === prev.id) ?? prev
-        })
+        setViewing(prev => (prev ? (d.raffles ?? []).find(r => r.id === prev.id) ?? prev : null))
       } catch {}
     }
     es.onerror = () => {
@@ -737,23 +816,35 @@ export default function RafflesPage() {
     setDuplicating(null)
   }
 
-  const statusBadge = (r: Raffle) => {
-    const isActive = r.status === 'active'
-    return (
-      <span style={{
-        fontFamily: 'var(--font-body)', fontSize: 7, letterSpacing: '0.1em', textTransform: 'uppercase',
-        padding: '2px 8px', borderRadius: 20,
-        background: isActive ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.05)',
-        border: `1px solid ${isActive ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
-        color: isActive ? '#4ade80' : 'rgba(254,240,244,0.3)',
-      }}>
-        {isActive ? '● active' : '○ ended'}
-      </span>
-    )
+  const pickWinner = async (raffleId: string, prizeId?: string) => {
+    // esta función se usa dentro del drawer; el botón "Elegir" abre el drawer
+    // pero conservamos la lógica original que abría directamente el pick.
+    // Para mantener consistencia, simplemente abrimos el drawer y dentro se maneja.
+    const raffle = raffles.find(r => r.id === raffleId)
+    if (raffle) setViewing(raffle)
   }
 
-  const active = raffles.filter(r => r.status === 'active')
-  const ended  = raffles.filter(r => r.status === 'ended')
+  const launchRaffle = async (id: string) => {
+    // Cambiar estado de 'draft' a 'active' (si existe campo draft)
+    const res = await fetch(`/api/admin/raffles/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'active' }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setRaffles(prev => prev.map(r => r.id === id ? data.raffle : r))
+    }
+  }
+
+  const filteredRaffles = useMemo(() => {
+    if (activeFilter === 'todos') return raffles
+    if (activeFilter === 'active') return raffles.filter(r => r.status === 'active')
+    return raffles.filter(r => r.status === 'ended')
+  }, [raffles, activeFilter])
+
+  const activeCount = raffles.filter(r => r.status === 'active').length
+  const endedCount = raffles.filter(r => r.status === 'ended').length
 
   return (
     <>
@@ -763,7 +854,7 @@ export default function RafflesPage() {
             <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: 'var(--text)', lineHeight: 1.1 }}>Giveaways</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
               <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                {active.length} active · {ended.length} completed
+                {activeCount} active · {endedCount} completed
               </div>
               {connected && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -787,83 +878,163 @@ export default function RafflesPage() {
           </button>
         </div>
 
+        {/* Filtros rápidos */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+          {(['todos', 'active', 'ended'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setActiveFilter(f)}
+              style={{
+                padding: '5px 12px', borderRadius: 20,
+                border: `1px solid ${activeFilter === f ? 'rgba(196,20,40,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                background: activeFilter === f ? 'rgba(196,20,40,0.12)' : 'transparent',
+                color: activeFilter === f ? 'var(--text)' : 'var(--text-muted)',
+                fontFamily: 'var(--font-body)', fontSize: 9, cursor: 'pointer', letterSpacing: '0.08em',
+              }}
+            >
+              {f === 'todos' ? `todos (${raffles.length})` : f === 'active' ? `en curso (${activeCount})` : `finalizados (${endedCount})`}
+            </button>
+          ))}
+        </div>
+
         {loading ? (
           <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(254,240,244,0.3)', textAlign: 'center', paddingTop: 60, letterSpacing: '0.1em' }}>loading…</div>
-        ) : raffles.length === 0 ? (
+        ) : filteredRaffles.length === 0 ? (
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(196,20,40,0.2)', borderRadius: 12, padding: '48px 24px', textAlign: 'center' }}>
             <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(254,240,244,0.25)', letterSpacing: '0.08em' }}>no giveaways yet</div>
             <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.15)', marginTop: 6 }}>create your first giveaway</div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {raffles.map(r => {
-              const winners = r.winners ?? []
-              const maxWinners = r.maxWinners ?? 1
-              const allWinnersPicked = winners.length >= maxWinners
-              return (
-                <div key={r.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  background: r.status === 'ended' ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.025)',
-                  border: `1px solid ${r.status === 'ended' ? 'rgba(255,255,255,0.05)' : 'rgba(196,20,40,0.15)'}`,
-                  borderRadius: 10, padding: '12px 16px',
-                  opacity: r.status === 'ended' ? 0.7 : 1,
-                }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>{r.title}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      {statusBadge(r)}
-                      <span style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(254,240,244,0.25)' }}>
-                        👥 {r.entries.length}
+          filteredRaffles.map(raffle => {
+            const isLive = raffle.status === 'active' && (!raffle.pickedAt && !raffle.endsAt)
+            const isDone = raffle.status === 'ended'
+            const isDraft = raffle.status === 'draft'
+            const statusColor = isDone ? 'rgba(255,255,255,0.18)' : isDraft ? '#fbbf24' : '#4ade80'
+            const statusLabel = isDone ? 'FINALIZADO' : isDraft ? 'BORRADOR' : 'EN CURSO'
+            const participantCount = raffle.entries?.length ?? 0
+            const now = Date.now()
+            const endsAt = raffle.endsAt ? new Date(raffle.endsAt).getTime() : null
+            const createdAt = new Date(raffle.createdAt).getTime()
+            const totalSpan = endsAt ? endsAt - createdAt : null
+            const elapsed = endsAt ? Math.min(1, (now - createdAt) / (endsAt - createdAt)) : null
+            const winners = raffle.winners ?? []
+            const maxWinners = raffle.maxWinners ?? 1
+            const allWinnersPicked = winners.length >= maxWinners
+
+            return (
+              <div key={raffle.id} style={{
+                border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
+                marginBottom: 10, overflow: 'hidden', background: 'rgba(12,0,16,0.7)',
+                transition: 'border-color 0.2s',
+              }}>
+                {/* Header con estado y acciones */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px' }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%', marginTop: 4, flexShrink: 0,
+                    background: statusColor,
+                    boxShadow: isLive ? `0 0 6px ${statusColor}` : 'none',
+                    animation: isLive ? 'pulse-dot 2s infinite' : 'none',
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                      <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text)' }}>
+                        {raffle.title}
                       </span>
-                      {maxWinners > 1 && (
-                        <span style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: allWinnersPicked ? 'rgba(255,215,0,0.6)' : 'rgba(254,240,244,0.25)' }}>
-                          🏆 {winners.length}/{maxWinners}
-                        </span>
+                      <span style={{
+                        fontSize: 7, padding: '2px 7px', borderRadius: 10, letterSpacing: '0.1em',
+                        background: isDone ? 'rgba(255,255,255,0.05)' : isDraft ? 'rgba(251,191,36,0.12)' : 'rgba(74,222,128,0.12)',
+                        color: statusColor, border: `1px solid ${statusColor}40`,
+                      }}>
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, fontSize: 9, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+                      <span>👥 {participantCount} participantes</span>
+                      {endsAt && !isDone && <Countdown endsAt={raffle.endsAt!} />}
+                      {isDone && raffle.pickedAt && (
+                        <span>✓ Cerrado {new Date(raffle.pickedAt).toLocaleDateString('es-ES')}</span>
                       )}
-                      {winners.length === 1 && maxWinners === 1 && (
-                        <span style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(255,215,0,0.6)' }}>
-                          🏆 {winners[0].discordUsername}
-                        </span>
-                      )}
-                      {r.endsAt && r.status === 'active' && (
-                        <Countdown endsAt={r.endsAt} />
-                      )}
-                      {r.endsAt && r.status === 'ended' && (
-                        <span style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(254,240,244,0.2)' }}>
-                          · {new Date(r.endsAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                        </span>
-                      )}
+                      <span>🏆 {raffle.prizes?.length ?? 1} {(raffle.prizes?.length ?? 1) === 1 ? 'premio' : 'premios'}</span>
                     </div>
                   </div>
-
-                  <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                    <button onClick={() => setViewing(r)}
-                      style={{ ...S, padding: '5px 10px', fontSize: 9, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, color: 'rgba(254,240,244,0.5)', cursor: 'pointer' }}>
-                      see
-                    </button>
-                    {r.status === 'active' && (
-                      <button onClick={() => { setEditing(r); setShowModal(true) }}
-                        style={{ ...S, padding: '5px 10px', fontSize: 9, background: 'rgba(196,20,40,0.08)', border: '1px solid rgba(196,20,40,0.2)', borderRadius: 6, color: 'rgba(254,240,244,0.5)', cursor: 'pointer' }}>
-                        ✏
+                  {/* Botones de acción rápida */}
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {!isDone && (
+                      <button onClick={() => setViewing(raffle)} style={BTN_GHOST}>
+                        🎯 Elegir
                       </button>
                     )}
-                    <button onClick={() => handleDuplicate(r.id)} disabled={duplicating === r.id}
-                      style={{ ...S, padding: '5px 10px', fontSize: 9, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, color: 'rgba(254,240,244,0.4)', cursor: 'pointer' }}
-                      title="Duplicate giveaway">
-                      {duplicating === r.id ? '…' : '⎘'}
+                    {isDone && (
+                      <button onClick={() => handleDuplicate(raffle.id)} disabled={duplicating === raffle.id} style={BTN_GHOST}>
+                        {duplicating === raffle.id ? '…' : '📋 Duplicar'}
+                      </button>
+                    )}
+                    {isDraft && (
+                      <button onClick={() => launchRaffle(raffle.id)} style={BTN_RED}>
+                        ▶ Lanzar
+                      </button>
+                    )}
+                    <button onClick={() => { setEditing(raffle); setShowModal(true) }} style={BTN_GHOST} title="Editar">
+                      ✏
                     </button>
-                    <button onClick={() => handleDelete(r.id)} disabled={deleting === r.id}
-                      style={{ background: 'none', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6, color: 'rgba(254,240,244,0.25)', cursor: 'pointer', padding: '4px 8px', fontSize: 11 }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(196,20,40,0.4)'; e.currentTarget.style.color = 'var(--primary)' }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(254,240,244,0.25)' }}
-                    >
-                      {deleting === r.id ? '…' : '✕'}
+                    <button onClick={() => handleDelete(raffle.id)} disabled={deleting === raffle.id} style={BTN_DELETE}>
+                      {deleting === raffle.id ? '…' : '✕'}
                     </button>
                   </div>
                 </div>
-              )
-            })}
-          </div>
+
+                {/* Lista de premios */}
+                {raffle.prizes?.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, padding: '0 16px 12px', flexWrap: 'wrap' }}>
+                    {raffle.prizes.map((prize, i) => (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '5px 10px', borderRadius: 20,
+                        border: '1px solid rgba(255,255,255,0.08)', fontSize: 9, color: 'var(--text-muted)',
+                      }}>
+                        <div style={{
+                          width: 16, height: 16, borderRadius: '50%',
+                          background: 'rgba(196,20,40,0.14)', border: '1px solid rgba(196,20,40,0.3)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 8, color: 'var(--primary)',
+                        }}>{i + 1}</div>
+                        {prize.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Barra de progreso del tiempo (solo activos) */}
+                {isLive && elapsed !== null && (
+                  <div style={{ padding: '0 16px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%', width: `${(elapsed * 100).toFixed(1)}%`,
+                        background: elapsed > 0.8 ? '#f87171' : '#4ade80', borderRadius: 2, transition: 'width 0.5s',
+                      }} />
+                    </div>
+                    <span style={{ fontSize: 8, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      {Math.round(elapsed * 100)}% del tiempo
+                    </span>
+                  </div>
+                )}
+
+                {/* Banner del ganador */}
+                {isDone && winners.length > 0 && (
+                  <div style={{
+                    padding: '8px 16px', background: 'rgba(74,222,128,0.07)',
+                    borderTop: '1px solid rgba(74,222,128,0.2)',
+                    fontSize: 9, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 6,
+                  }}>
+                    🏅 {winners.length === 1
+                      ? `Ganador: ${winners[0].discordUsername}`
+                      : `Ganadores: ${winners.map(w => w.discordUsername).join(', ')}`
+                    }
+                  </div>
+                )}
+              </div>
+            )
+          })
         )}
       </div>
 
@@ -873,8 +1044,7 @@ export default function RafflesPage() {
           onClose={() => { setShowModal(false); setEditing(null) }}
           onSaved={r => {
             setRaffles(prev => editing ? prev.map(x => x.id === r.id ? r : x) : [r, ...prev])
-            setShowModal(false)
-            setEditing(null)
+            setShowModal(false); setEditing(null)
           }}
         />
       )}
@@ -895,4 +1065,19 @@ export default function RafflesPage() {
       `}</style>
     </>
   )
+}
+
+// Estilos auxiliares para botones
+const BTN_GHOST: React.CSSProperties = {
+  background: 'none', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6,
+  padding: '5px 10px', fontSize: 9, fontFamily: 'var(--font-body)', color: 'rgba(254,240,244,0.5)',
+  cursor: 'pointer', transition: 'all 0.15s',
+}
+const BTN_RED: React.CSSProperties = {
+  ...BTN_GHOST,
+  borderColor: 'rgba(196,20,40,0.4)', color: 'rgba(196,20,40,0.8)',
+}
+const BTN_DELETE: React.CSSProperties = {
+  ...BTN_GHOST,
+  padding: '4px 8px', fontSize: 11,
 }

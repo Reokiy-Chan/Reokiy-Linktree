@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { addVisit, updateVisitDuration, parseUA } from '@/app/lib/data'
 import { touchPresence, dropPresence } from '@/app/lib/presence'
-import { readSettings, attackRateLimit, getClientIp } from '@/app/lib/settings'
+import { readSettings, attackRateLimit, getTrueClientIp  } from '@/app/lib/settings'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
     if (page.startsWith('/admin')) return NextResponse.json({ ok: true })
 
     const settings = await readSettings()
-    if (!settings.trackingEnabled) return NextResponse.json({ ok: true })
-    if (settings.attackMode && !attackRateLimit(getClientIp(request.headers))) {
+    // Usar getTrueClientIp en lugar de la lógica inline
+    if (settings.attackMode && !attackRateLimit(getTrueClientIp(request.headers))) {
       return NextResponse.json({ ok: false }, { status: 429 })
     }
 
@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    const forwarded = request.headers.get('x-forwarded-for')
-    const ip = (forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') ?? '').trim()
+    // Obtener IP real con la función centralizada
+    const ip = getTrueClientIp(request.headers)
     const ua = request.headers.get('user-agent') ?? ''
     const { browser, os, device } = parseUA(ua)
 

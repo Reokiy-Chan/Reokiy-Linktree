@@ -2,10 +2,10 @@
 
 import type { CSSProperties } from 'react'
 import { useState, useEffect } from 'react'
+import DonutChart from './components/DonutChart'
 import { useRouter } from 'next/navigation'
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer
 } from 'recharts'
 import KPICard from './components/KPICard'
 import type { Stats } from '@/app/lib/data'
@@ -98,7 +98,7 @@ export default function OverviewPage() {
       </div>
 
       {/* KPI row */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+      <div className="ov-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 14 }}>
         <KPICard
           label="total visits"
           value={stats.total.toLocaleString()}
@@ -131,7 +131,7 @@ export default function OverviewPage() {
       </div>
 
       {/* Visits over time + device donut */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 10, marginBottom: 14 }}>
+      <div className="ov-chart-row" style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 10, marginBottom: 14 }}>
         <Sec title="visits · last 7 days">
           <ResponsiveContainer width="100%" height={120}>
             <AreaChart data={stats.byDay} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
@@ -151,11 +151,21 @@ export default function OverviewPage() {
 
         <Sec title="devices">
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-            <PieChart width={120} height={100}>
-              <Pie data={stats.byDevice} dataKey="count" nameKey="device" cx={60} cy={50} innerRadius={30} outerRadius={48} paddingAngle={3}>
-                {stats.byDevice.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-              </Pie>
-            </PieChart>
+            <DonutChart
+              size={120}
+              thickness={14}
+              slices={stats.byDevice.map((d, i) => ({
+                label: d.device,
+                value: d.count,
+                color: PIE_COLORS[i % PIE_COLORS.length],
+              }))}
+              centerLabel={{
+                value: `${stats.byDevice[0] && deviceTotal > 0
+                  ? Math.round((stats.byDevice[0].count / deviceTotal) * 100)
+                  : 0}%`,
+                sub: stats.byDevice[0]?.device?.toUpperCase() ?? 'DESKTOP',
+              }}
+            />
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 5 }}>
               {stats.byDevice.map((d, i) => (
                 <div key={d.device} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
@@ -172,7 +182,7 @@ export default function OverviewPage() {
       </div>
 
       {/* Pages + Countries + Referrers */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
+      <div className="ov-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
         <Sec title="top pages">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {stats.byPage.slice(0, 6).map(p => (
@@ -229,7 +239,7 @@ export default function OverviewPage() {
       </div>
 
       {/* Recent sessions + Browser/OS */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 10 }}>
+      <div className="ov-chart-row" style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 10 }}>
         <Sec title="recent sessions">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {recentSessions.length === 0 && (
@@ -276,6 +286,16 @@ export default function OverviewPage() {
           </div>
         </Sec>
       </div>
+
+      <style>{`
+        @media (max-width: 860px) {
+          .ov-3col { grid-template-columns: 1fr 1fr !important; }
+        }
+        @media (max-width: 680px) {
+          .ov-chart-row { grid-template-columns: 1fr !important; }
+          .ov-3col { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   )
 }

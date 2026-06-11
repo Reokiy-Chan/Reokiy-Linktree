@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateSession } from '@/app/lib/auth'
+import { getSession } from '@/app/lib/auth'
 import { readSettings, updateSettings, type SiteSettings } from '@/app/lib/settings'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// True if the session may manage settings (root, or has the 'settings' grant)
+function canManage(session: Awaited<ReturnType<typeof getSession>>): boolean {
+  if (!session || session.setup) return false
+  return session.r === 'root' || session.p === 'all' || (Array.isArray(session.p) && session.p.includes('settings'))
+}
+
 export async function GET(req: NextRequest) {
-  if (!(await validateSession(req))) {
+  const session = await getSession(req)
+  if (!session || session.setup) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const settings = await readSettings()
@@ -14,8 +21,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!(await validateSession(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!canManage(await getSession(req))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   try {
     const body = await req.json() as Partial<SiteSettings>

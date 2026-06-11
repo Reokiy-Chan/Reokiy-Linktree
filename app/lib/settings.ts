@@ -96,7 +96,23 @@ export function attackRateLimit(ip: string): boolean {
   return entry.count <= MAX_HITS
 }
 
-export function getClientIp(headers: Headers): string {
-  const fwd = headers.get('x-forwarded-for')
-  return (fwd ? fwd.split(',')[0] : headers.get('x-real-ip') ?? 'unknown').trim()
+/**
+ * Obtiene la IP real del cliente, ignorando valores spoofeados.
+ * En Vercel/proxy, x-real-ip es confiable. Si no existe, toma el último elemento
+ * de x-forwarded-for (asumiendo que proxies de confianza añaden al final).
+ */
+export function getTrueClientIp(headers: Headers): string {
+  // x-real-ip es el método preferido (lo establece el proxy final)
+  const realIp = headers.get('x-real-ip')
+  if (realIp) return realIp.trim()
+
+  // Fallback: último elemento de x-forwarded-for (puede ser manipulado, pero mejor que el primero)
+  const forwarded = headers.get('x-forwarded-for')
+  if (forwarded) {
+    const parts = forwarded.split(',')
+    // Eliminar espacios y devolver la última IP (la más cercana al servidor)
+    const last = parts[parts.length - 1].trim()
+    if (last) return last
+  }
+  return ''
 }

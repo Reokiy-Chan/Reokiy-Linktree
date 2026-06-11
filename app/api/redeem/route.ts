@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCodeByString, markUsed } from '@/app/lib/codes'
-import { readSettings, attackRateLimit, getClientIp } from '@/app/lib/settings'
+import { readSettings, attackRateLimit, getTrueClientIp } from '@/app/lib/settings'
 
 export async function POST(req: NextRequest) {
   const settings = await readSettings()
   if (!settings.redeemEnabled) {
     return NextResponse.json({ error: 'Redeem is temporarily disabled' }, { status: 503 })
   }
-  if (settings.attackMode && !attackRateLimit(getClientIp(req.headers))) {
+  if (settings.attackMode && !attackRateLimit(getTrueClientIp(req.headers))) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
 
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     rewardTitle:       entry.rewardTitle ?? null,
     // Gift box
     giftAnimation:     entry.giftAnimation    ?? false,
+    giftStyle:         entry.giftStyle        ?? 'modern',
     giftBoxColor:      entry.giftBoxColor     ?? '#c41428',
     giftRibbonColor:   entry.giftRibbonColor  ?? '#fef0f4',
     giftPattern:       entry.giftPattern      ?? 'none',
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
     giftPatternImage:  entry.giftPatternImage ?? null,
     // Scratch card
     scratchCard:            entry.scratchCard            ?? false,
+    scratchStyle:           entry.scratchStyle           ?? 'lottery',
     scratchCardColor:       entry.scratchCardColor       ?? '#2a1a2e',
     scratchCardLabel:       entry.scratchCardLabel       ?? null,
     scratchTextColor:       entry.scratchTextColor       ?? null,

@@ -34,7 +34,12 @@ export interface AdminUser {
   createdAt: string
   createdBy?: string
   lastLogin?: string
-  webauthnCredentials?: WebAuthnCredential[]
+  webauthnCredentials?: {
+    id: string
+    name: string
+    createdAt: string
+    transports?: string[]
+  }[]
 }
 
 // What the client receives (never leak hashes)
@@ -49,6 +54,12 @@ export interface SafeUser {
   isRoot?: boolean
   createdAt: string
   lastLogin?: string
+  webauthnCredentials?: {
+    id: string
+    name: string
+    createdAt: string
+    transports?: string[]
+  }[]
 }
 
 export function toSafeUser(u: AdminUser): SafeUser {
@@ -57,6 +68,9 @@ export function toSafeUser(u: AdminUser): SafeUser {
     authMethod: u.authMethod, pendingSetup: u.pendingSetup,
     permissions: u.permissions, isRoot: u.isRoot,
     createdAt: u.createdAt, lastLogin: u.lastLogin,
+    webauthnCredentials: u.webauthnCredentials?.map(c => ({
+      id: c.id, name: c.name, createdAt: c.createdAt, transports: c.transports,
+    })),
   }
 }
 
@@ -398,3 +412,4 @@ export async function findUserByCredentialId(credId: string): Promise<AdminUser 
   }
   return null
 }
+

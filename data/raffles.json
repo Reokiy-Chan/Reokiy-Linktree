@@ -47,7 +47,14 @@
     "autoEnd": true,
     "maxWinners": 1,
     "bannedUsernames": [],
-    "winners": [],
+    "winners": [
+      {
+        "discordUsername": "testt",
+        "pickedAt": "2026-06-11T09:16:09.178Z",
+        "prizeId": "cb2a3145-1e92-48fa-bcd5-f4e72f26670a",
+        "prizeLabel": "test"
+      }
+    ],
     "id": "fb6415f4-e19e-4832-9185-e253e8686057",
     "entries": [
       {
@@ -55,7 +62,9 @@
         "enteredAt": "2026-06-10T21:58:29.839Z"
       }
     ],
-    "status": "active",
-    "createdAt": "2026-06-10T21:58:20.859Z"
+    "status": "ended",
+    "createdAt": "2026-06-10T21:58:20.859Z",
+    "winnerId": "testt",
+    "pickedAt": "2026-06-11T09:16:09.178Z"
   }
 ]

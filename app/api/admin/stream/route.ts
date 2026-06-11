@@ -1,6 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { verifyToken } from '@/app/lib/auth'
+import { NextRequest } from 'next/server'
+import { getSession } from '@/app/lib/auth'
 import { readVisits } from '@/app/lib/data'
 import { getOnlineSessions, type PresenceEntry } from '@/app/lib/presence'
 
@@ -8,11 +7,9 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const jar = await cookies()
-  const token = jar.get('admin_session')?.value
-  const secret = process.env.ADMIN_SECRET ?? 'reokiy_secret_change_me'
-  if (!token || !verifyToken(token, secret)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getSession(req)
+  if (!session || session.setup) {
+    return new Response('Unauthorized', { status: 401 })
   }
 
   const encoder = new TextEncoder()
@@ -21,7 +18,6 @@ export async function GET(req: NextRequest) {
       const send = (data: unknown) => {
         try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`)) } catch {}
       }
-      // Per-connection presence snapshot, used to diff connects/disconnects
       let prevOnline = new Map<string, PresenceEntry>()
       let firstTick = true
 
@@ -38,7 +34,6 @@ export async function GET(req: NextRequest) {
             .slice(0, 8)
             .map(v => ({ lat: v.lat!, lon: v.lon!, country: v.country ?? '', city: v.city ?? '', page: v.page, timestamp: v.timestamp }))
 
-          // Diff online sessions → connect/disconnect events
           const onlineMap = new Map(online.map(p => [p.sessionId, p]))
           const events: { type: 'connect' | 'disconnect'; sessionId: string; city: string; country: string; page: string; lat?: number; lon?: number; ts: number }[] = []
           if (!firstTick) {

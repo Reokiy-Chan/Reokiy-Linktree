@@ -1,39 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getSession } from '@/app/lib/auth'
+import { getUser } from '@/app/lib/users'
 import { generateAuthenticationOptions } from '@simplewebauthn/server'
-import { listUsers, ensureRoot } from '@/app/lib/users'
-import { getRpConfig, storeChallenge } from '@/app/lib/webauthn'
+import type { AuthenticatorTransportFuture } from '@simplewebauthn/server'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
-  // El username es opcional. Si se proporciona, filtramos a sus credenciales.
-  // Si no, devolvemos allowCredentials vacío (el autenticador buscará él solo,
-  // pero el Flipper U2F necesita la lista — así que el username es recomendado).
-  const body = await req.json().catch(() => ({})) as { username?: string }
-  const { rpID } = getRpConfig()
-
-  let allowCredentials: { id: string; transports?: string[] }[] = []
-
-  if (body.username) {
-    const allUsers = await listUsers()
-    const root = await ensureRoot()
-    const target = [root, ...allUsers].find(u => u.username === body.username.trim().toLowerCase())
-    if (target?.webauthnCredentials?.length) {
-      allowCredentials = target.webauthnCredentials.map(c => ({
-        id: c.id,
-        transports: c.transports,
-      }))
-    }
+  const session = await getSession(req)
+  if (!session || session.setup) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const opts = await generateAuthenticationOptions({
-    rpID,
-    userVerification: 'discouraged',
-    allowCredentials,
+  const body = await req.json() as { username?: string }
+  const username = body.username?.trim().toLowerCase()
+  if (!username) {
+    return NextResponse.json({ error: 'Username required' }, { status: 400 })
+  }
+
+  const user = await getUser(session.uid)
+  if (!user || user.username !== username) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  }
+
+  const credentials = user.webauthnCredentials ?? []
+
+  const options = await generateAuthenticationOptions({
+    rpID: process.env.WEBAUTHN_RPID ?? 'localhost',
+    allowCredentials: credentials.map(cred => ({
+      id: cred.id,
+      transports: cred.transports as AuthenticatorTransportFuture[] | undefined,
+    })),
+    userVerification: 'preferred',
   })
 
-  // Guardamos challenge + username como meta para recuperar el usuario en verify
-  const token = await storeChallenge(opts.challenge, body.username ?? '')
-
-  return NextResponse.json({ ...opts, _token: token })
+  // Guardar challenge en sesión (por ejemplo, en una cookie o en memoria; aquí simplificamos)
+  // Normalmente se guarda en una cookie httpOnly. Por simplicidad, devolvemos un token.
+  const challengeToken = Buffer.from(JSON.stringify({ challenge: options.challenge, userId: session.uid })).toString('base64url')
+  const response = NextResponse.json({ ...options, _token: challengeToken })
+  response.cookies.set('webauthn_challenge', challengeToken, { httpOnly: true, maxAge: 300, path: '/' })
+  return response
 }

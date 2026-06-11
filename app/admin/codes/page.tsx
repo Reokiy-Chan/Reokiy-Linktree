@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import type { RedeemCode, RewardType, GiftPattern, ScratchDifficulty } from '@/app/lib/codes'
+import type { RedeemCode, RewardType, GiftPattern, ScratchDifficulty, GiftStyle, ScratchStyle } from '@/app/lib/codes'
 
 const S: React.CSSProperties = { fontFamily: 'var(--font-body)' }
 
@@ -142,6 +142,7 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
 
   // Gift animation
   const [giftAnimation, setGiftAnimation]     = useState(false)
+  const [giftStyle, setGiftStyle]             = useState<GiftStyle>('modern')
   const [giftBoxColor, setGiftBoxColor]       = useState('#c41428')
   const [giftRibbonColor, setGiftRibbonColor] = useState('#fef0f4')
   const [giftPattern, setGiftPattern]         = useState<GiftPattern>('none')
@@ -151,6 +152,7 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
 
   // Scratch card
   const [scratchCard, setScratchCard]           = useState(false)
+  const [scratchStyle, setScratchStyle]         = useState<ScratchStyle>('lottery')
   const [scratchCardColor, setScratchCardColor] = useState('#2a1a2e')
   const [scratchCardLabel, setScratchCardLabel] = useState('')
   const [scratchDifficulty, setScratchDifficulty] = useState<ScratchDifficulty>('normal')
@@ -232,12 +234,14 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
           rewardContent: content,
           rewardTitle: rewardTitle.trim(),
           giftAnimation,
+          giftStyle,
           giftBoxColor,
           giftRibbonColor,
           giftPattern,
           giftPatternColor,
           giftPatternImage: patternImageUrl,
           scratchCard,
+          scratchStyle,
           scratchCardColor,
           scratchCardLabel: scratchCardLabel.trim(),
           scratchDifficulty,
@@ -305,7 +309,7 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
               <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(254,240,244,0.35)', cursor: 'pointer', fontSize: 16 }}>✕</button>
             </div>
 
-            <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div  onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
               {/* ── Code ── */}
               <div>
@@ -476,6 +480,27 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
 
                 {giftAnimation && (
                   <>
+                    {/* Gift style: modern vs legacy */}
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Gift style</label>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {([
+                          { v: 'modern', label: 'Modern', desc: 'new rounded look' },
+                          { v: 'legacy', label: 'Legacy aspect gift', desc: 'original design' },
+                        ] as const).map(o => (
+                          <button key={o.v} type="button" onClick={() => setGiftStyle(o.v)}
+                            style={{
+                              flex: 1, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
+                              background: giftStyle === o.v ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)',
+                              border: `1px solid ${giftStyle === o.v ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`,
+                            }}>
+                            <div style={{ ...S, fontSize: 9, color: giftStyle === o.v ? 'var(--text)' : 'rgba(254,240,244,0.5)', letterSpacing: '0.04em' }}>{o.label}</div>
+                            <div style={{ ...S, fontSize: 7.5, color: 'rgba(254,240,244,0.3)', marginTop: 2 }}>{o.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Colors */}
                     <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
                       <div style={{ flex: 1 }}>
@@ -583,6 +608,26 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
 
                 {scratchCard && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {/* Scratch style */}
+                    <div>
+                      <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Card style</label>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {([
+                          { v: 'lottery', label: '🎟️ Lottery ticket', desc: 'gold scratch-off' },
+                          { v: 'classic', label: '🪄 Classic', desc: 'dark overlay' },
+                        ] as const).map(o => (
+                          <button key={o.v} type="button" onClick={() => setScratchStyle(o.v)}
+                            style={{
+                              flex: 1, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
+                              background: scratchStyle === o.v ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)',
+                              border: `1px solid ${scratchStyle === o.v ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`,
+                            }}>
+                            <div style={{ ...S, fontSize: 9, color: scratchStyle === o.v ? 'var(--text)' : 'rgba(254,240,244,0.5)' }}>{o.label}</div>
+                            <div style={{ ...S, fontSize: 7.5, color: 'rgba(254,240,244,0.3)', marginTop: 2 }}>{o.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <div>
                       <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Color de fondo</label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -670,7 +715,7 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
 
               {error && <div style={{ ...S, fontSize: 10, color: 'var(--primary)', textAlign: 'center' }}>{error}</div>}
 
-              <button type="submit" disabled={saving || uploading}
+              <button type="button" onClick={submit} disabled={saving || uploading}
                 style={{
                   ...S, padding: '10px 0', marginTop: 4,
                   background: saving || uploading ? 'rgba(196,20,40,0.08)' : 'rgba(196,20,40,0.2)',
@@ -679,9 +724,9 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
                   fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
                   cursor: saving || uploading ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
                 }}>
-                {uploading ? 'uploading…' : saving ? 'creating…' : 'create code'}
+                  {uploading ? 'uploading…' : saving ? 'creating…' : 'create code'}
               </button>
-            </form>
+            </div>
           </>
         )}
       </div>
@@ -695,6 +740,7 @@ export default function CodesPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [activeFilter, setActiveFilter] = useState<'todos' | 'gift' | 'scratch' | 'link' | 'image'>('todos')
 
   const load = async () => {
     const r = await fetch('/api/admin/codes')
@@ -714,8 +760,31 @@ export default function CodesPage() {
     setDeleting(null)
   }
 
-  const used  = codes.filter(c => c.used).length
-  const avail = codes.filter(c => !c.used).length
+  const filteredCodes = useMemo(() => {
+    if (activeFilter === 'todos') return codes
+    if (activeFilter === 'gift') return codes.filter(c => c.giftAnimation)
+    if (activeFilter === 'scratch') return codes.filter(c => c.scratchCard)
+    if (activeFilter === 'link') return codes.filter(c => c.rewardType === 'link')
+    if (activeFilter === 'image') return codes.filter(c => c.rewardType === 'image')
+    return codes
+  }, [codes, activeFilter])
+
+  const usedCount  = codes.filter(c => c.used || (c.maxUses !== null && (c.useCount ?? 0) >= c.maxUses)).length
+  const activeCount = codes.length - usedCount
+
+  const relativeTime = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    if (days === 0) return 'today'
+    if (days === 1) return 'yesterday'
+    if (days < 7) return `${days}d`
+    return new Date(dateStr).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
+  }
+
+  const exportCodes = () => {
+    // Placeholder: implement CSV export later
+    alert('CSV export not implemented yet')
+  }
 
   return (
     <>
@@ -724,7 +793,7 @@ export default function CodesPage() {
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: 'var(--text)', lineHeight: 1.1 }}>redeem codes</div>
             <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em', marginTop: 4, textTransform: 'uppercase' }}>
-              {avail} active · {used} used
+              {activeCount} active · {usedCount} used
             </div>
           </div>
           <button onClick={() => setShowModal(true)}
@@ -753,57 +822,137 @@ export default function CodesPage() {
             <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(254,240,244,0.15)', marginTop: 6 }}>create your first redeem code above</div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {codes.map(c => (
-              <div key={c.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                background: c.used ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.025)',
-                border: `1px solid ${c.used ? 'rgba(255,255,255,0.05)' : 'rgba(196,20,40,0.15)'}`,
-                borderRadius: 10, padding: '12px 16px',
-                opacity: c.used ? 0.55 : 1, transition: 'opacity 0.2s',
-              }}>
-                <div style={{ fontFamily: 'monospace', fontSize: 13, letterSpacing: '0.12em', color: c.used ? 'rgba(254,240,244,0.35)' : 'var(--text)', flexShrink: 0, minWidth: 100 }}>
-                  {c.code}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(254,240,244,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</div>
-                  {c.rewardTitle && (
-                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(254,240,244,0.3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.rewardTitle}</div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 5, flexShrink: 0, alignItems: 'center' }}>
-                  <Badge type={c.rewardType} used={false} />
-                  {c.used && <Badge type={c.rewardType} used={true} />}
-                  {c.giftAnimation && <span style={{ fontSize: 12 }} title="Gift animation enabled">🎁</span>}
-                  {c.scratchCard && <span style={{ fontSize: 12 }} title="Scratch card enabled">🪄</span>}
-                </div>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(254,240,244,0.2)', flexShrink: 0, textAlign: 'right' }}>
-                  <div>{new Date(c.createdAt).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}</div>
-                  {/* Multi-use indicator */}
-                  {c.maxUses === null ? (
-                    <div style={{ color: '#4ade8088', marginTop: 2 }}>∞ unlimited · {c.useCount ?? 0} uses</div>
-                  ) : (c.maxUses ?? 1) > 1 ? (
-                    <div style={{ color: 'rgba(196,20,40,0.5)', marginTop: 2 }}>{c.useCount ?? 0}/{c.maxUses} uses</div>
-                  ) : c.usedAt ? (
-                    <div style={{ color: 'rgba(196,20,40,0.4)', marginTop: 2 }}>redeemed {new Date(c.usedAt).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}</div>
-                  ) : null}
-                </div>
-                <button
-                  onClick={() => handleDelete(c.id)}
-                  disabled={deleting === c.id}
-                  style={{
-                    background: 'none', border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: 6, color: 'rgba(254,240,244,0.25)', cursor: 'pointer',
-                    padding: '4px 8px', fontSize: 11, flexShrink: 0, transition: 'all 0.15s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(196,20,40,0.4)'; e.currentTarget.style.color = 'var(--primary)' }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(254,240,244,0.25)' }}
-                >
-                  {deleting === c.id ? '…' : '✕'}
-                </button>
-              </div>
-            ))}
-          </div>
+          <>
+            {/* Filtros por tipo */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+              {(['todos', 'gift', 'scratch', 'link', 'image'] as const).map(f => {
+                let count = codes.length
+                if (f === 'gift') count = codes.filter(c => c.giftAnimation).length
+                else if (f === 'scratch') count = codes.filter(c => c.scratchCard).length
+                else if (f === 'link') count = codes.filter(c => c.rewardType === 'link').length
+                else if (f === 'image') count = codes.filter(c => c.rewardType === 'image').length
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setActiveFilter(f)}
+                    style={{
+                      padding: '5px 12px', borderRadius: 20,
+                      border: `1px solid ${activeFilter === f ? 'rgba(196,20,40,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                      background: activeFilter === f ? 'rgba(196,20,40,0.12)' : 'transparent',
+                      color: activeFilter === f ? 'var(--text)' : 'var(--text-muted)',
+                      fontFamily: 'var(--font-body)', fontSize: 9, cursor: 'pointer', letterSpacing: '0.08em',
+                    }}
+                  >
+                    {f === 'todos' ? `todos (${count})` : f}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Grid de cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+              {filteredCodes.map(code => {
+                const isExhausted = code.used || (code.maxUses !== null && (code.useCount ?? 0) >= code.maxUses)
+                return (
+                  <div
+                    key={code.id}
+                    style={{
+                      border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10,
+                      overflow: 'hidden', background: 'rgba(12,0,16,0.8)',
+                      cursor: 'pointer', transition: 'border-color 0.2s',
+                      opacity: isExhausted ? 0.55 : 1,
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(196,20,40,0.35)')}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+                  >
+                    {/* Preview visual según tipo */}
+                    <div style={{
+                      height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: code.giftAnimation ? 'linear-gradient(135deg,#1a0012,#2a0020)'
+                        : code.scratchCard ? 'linear-gradient(135deg,#0a001a,#150025)'
+                        : 'linear-gradient(135deg,#001020,#001830)',
+                    }}>
+                      {code.giftAnimation
+                        ? <span style={{ fontSize: 32 }}>🎁</span>
+                        : code.scratchCard
+                        ? <div style={{
+                            width: 88, height: 44, background: code.scratchCardColor || '#2a1a2e',
+                            borderRadius: 4, border: '1px solid rgba(196,20,40,0.3)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 9, color: 'rgba(196,20,40,0.6)', letterSpacing: '0.08em',
+                          }}>RASCA</div>
+                        : <span style={{ fontSize: 28, opacity: 0.6 }}>🔗</span>
+                      }
+                    </div>
+
+                    {/* Info */}
+                    <div style={{ padding: '10px 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {code.code}
+                        </span>
+                        <Badge type={code.rewardType} used={isExhausted} />
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, fontSize: 8, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
+                        {code.maxUses === null
+                          ? <span>∞ ilimitado</span>
+                          : code.maxUses === 1
+                          ? <span>uso único</span>
+                          : <span>{code.useCount ?? 0} / {code.maxUses} usos</span>
+                        }
+                        <span>{relativeTime(code.createdAt)}</span>
+                      </div>
+                      {/* Barra de progreso para multi-use finito */}
+                      {code.maxUses !== null && code.maxUses > 1 && (
+                        <div style={{ height: 2, background: 'rgba(255,255,255,0.06)', borderRadius: 1, marginTop: 7, overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%', borderRadius: 1,
+                            width: `${Math.min(100, ((code.useCount ?? 0) / code.maxUses) * 100)}%`,
+                            background: ((code.useCount ?? 0) >= code.maxUses) ? 'rgba(255,255,255,0.2)' : 'var(--primary)',
+                            transition: 'width 0.4s',
+                          }} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Botón eliminar dentro de la card (opcional) */}
+                    <div style={{ padding: '6px 12px 12px', display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(code.id) }}
+                        disabled={deleting === code.id}
+                        style={{
+                          background: 'none', border: '1px solid rgba(255,255,255,0.06)',
+                          borderRadius: 6, color: 'rgba(254,240,244,0.25)', cursor: 'pointer',
+                          padding: '4px 8px', fontSize: 11, transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(196,20,40,0.4)'; e.currentTarget.style.color = 'var(--primary)' }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(254,240,244,0.25)' }}
+                      >
+                        {deleting === code.id ? '…' : '✕'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Footer con stats */}
+            <div style={{
+              display: 'flex', gap: 20, marginTop: 14, paddingTop: 12,
+              borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: 9, color: 'var(--text-muted)',
+            }}>
+              <span>Total: <b style={{ color: 'var(--text)' }}>{codes.length}</b></span>
+              <span>Activos: <b style={{ color: '#4ade80' }}>{activeCount}</b></span>
+              <span>Agotados: <b style={{ color: 'var(--text)' }}>{usedCount}</b></span>
+              <span style={{ marginLeft: 'auto' }}>
+                <button onClick={exportCodes} style={{
+                  background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6,
+                  padding: '4px 10px', color: 'rgba(254,240,244,0.6)', fontSize: 9,
+                  fontFamily: 'var(--font-body)', cursor: 'pointer', letterSpacing: '0.08em',
+                }}>exportar CSV</button>
+              </span>
+            </div>
+          </>
         )}
       </div>
 

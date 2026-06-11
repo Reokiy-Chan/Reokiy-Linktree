@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { enterRaffle } from '@/app/lib/raffles'
-import { readSettings, attackRateLimit, getClientIp } from '@/app/lib/settings'
+import { readSettings, attackRateLimit, getTrueClientIp  } from '@/app/lib/settings'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const settings = await readSettings()
   if (!settings.rafflesEnabled) {
     return NextResponse.json({ error: 'Giveaways are temporarily disabled' }, { status: 503 })
   }
-  if (settings.attackMode && !attackRateLimit(getClientIp(req.headers))) {
+  if (settings.attackMode && !attackRateLimit(getTrueClientIp (req.headers))) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
 

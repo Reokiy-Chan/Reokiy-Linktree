@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "linktree",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "start", "-p", "3473"],
+      "port": 3473
+    }
+  ]
+}

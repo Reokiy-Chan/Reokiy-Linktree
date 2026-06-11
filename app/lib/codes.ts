@@ -19,6 +19,10 @@ export type GiftPattern =
 
 export type ScratchDifficulty = 'easy' | 'normal' | 'hard' | 'very_hard'
 
+export type GiftStyle = 'modern' | 'legacy'
+
+export type ScratchStyle = 'classic' | 'lottery'
+
 export interface RedeemCode {
   id: string
   code: string
@@ -28,6 +32,7 @@ export interface RedeemCode {
   rewardTitle?: string
   // Gift box
   giftAnimation?: boolean
+  giftStyle?: GiftStyle        // 'modern' (default) or 'legacy' (old aspect)
   giftBoxColor?: string
   giftRibbonColor?: string
   giftPattern?: GiftPattern
@@ -35,6 +40,7 @@ export interface RedeemCode {
   giftPatternImage?: string
   // Scratch card
   scratchCard?: boolean
+  scratchStyle?: ScratchStyle    // 'lottery' (default, ticket look) or 'classic'
   scratchCardColor?: string
   scratchCardLabel?: string
   scratchTextColor?: string

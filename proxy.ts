@@ -15,6 +15,15 @@ async function verifyTokenEdge(token: string, secret: string): Promise<boolean> 
   } catch { return false }
 }
 
+// Decodes the JSON identity payload (does NOT verify — call verifyTokenEdge first)
+function decodePayload(token: string): { r?: string; setup?: boolean; p?: string[] | 'all' } | null {
+  try {
+    const [payloadB64] = token.split('.')
+    const json = atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'))
+    return JSON.parse(json)
+  } catch { return null }
+}
+
 // ─── Maintenance flag ─────────────────────────────────────────────────────────
 // Reads Upstash directly when configured (fast + works on cold edge instances),
 // falls back to the settings API for local/file-system mode. Short cache so a
@@ -38,7 +47,7 @@ async function fetchMaintenanceFlag(origin: string): Promise<boolean | null> {
         const settings = typeof d.result === 'string' ? JSON.parse(d.result) : d.result
         return !!settings?.maintenanceMode
       }
-    } catch {}
+    } catch { }
     return null
   }
   try {
@@ -47,7 +56,7 @@ async function fetchMaintenanceFlag(origin: string): Promise<boolean | null> {
       const d = await res.json() as { maintenance?: boolean }
       return !!d.maintenance
     }
-  } catch {}
+  } catch { }
   return null
 }
 
@@ -72,13 +81,42 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // Protect all /admin routes except /admin/login
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
     const token = request.cookies.get('admin_session')?.value
     const secret = process.env.ADMIN_SECRET ?? 'reokiy_secret_change_me'
 
     if (!token || !(await verifyTokenEdge(token, secret))) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+
+    const payload = decodePayload(token)
+
+    // ✅ FIX: Si el payload no es JSON válido con identidad → rechazar
+    if (!payload || !payload.r) {
+      return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+
+    // Setup token solo sirve para terminar el setup
+    if (payload.setup) {
+      return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+
+    // User management is root-only
+    if (pathname.startsWith('/admin/users') && payload.r !== 'root') {
+      return NextResponse.redirect(new URL('/admin', request.url))
+    }
+
+    // Per-section gating
+    if (payload.r !== 'root' && Array.isArray(payload.p)) {
+      const SECTION_PATHS: [string, string][] = [
+        ['/admin/live', 'live'], ['/admin/traffic', 'traffic'],
+        ['/admin/sessions', 'sessions'], ['/admin/codes', 'codes'],
+        ['/admin/raffles', 'giveaways'], ['/admin/settings', 'settings'],
+      ]
+      const match = SECTION_PATHS.find(([p]) => pathname.startsWith(p))
+      if (match && !payload.p.includes(match[1])) {
+        return NextResponse.redirect(new URL('/admin', request.url))
+      }
     }
   }
 

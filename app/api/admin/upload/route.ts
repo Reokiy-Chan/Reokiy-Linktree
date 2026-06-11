@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { verifyToken } from '@/app/lib/auth'
+import { getSession } from '@/app/lib/auth'
 import path from 'path'
 import { writeFileSync, mkdirSync, existsSync } from 'fs'
 
-async function auth() {
-  const jar = await cookies()
-  const token = jar.get('admin_session')?.value
-  const secret = process.env.ADMIN_SECRET ?? 'reokiy_secret_change_me'
-  return token && verifyToken(token, secret)
-}
-
 export async function POST(req: NextRequest) {
-  if (!await auth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getSession(req)
+  if (!session || session.setup) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   const formData = await req.formData()
   const file = formData.get('file') as File | null

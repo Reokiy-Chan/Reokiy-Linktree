@@ -1,16 +1,13 @@
 import { NextRequest } from 'next/server'
-import { cookies } from 'next/headers'
-import { verifyToken } from '@/app/lib/auth'
+import { getSession } from '@/app/lib/auth'
 import { listRaffles } from '@/app/lib/raffles'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const jar = await cookies()
-  const token = jar.get('admin_session')?.value
-  const secret = process.env.ADMIN_SECRET ?? 'reokiy_secret_change_me'
-  if (!token || !verifyToken(token, secret)) {
+  const session = await getSession(req)
+  if (!session || session.setup) {
     return new Response('Unauthorized', { status: 401 })
   }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import ParticlesBg from '../components/ParticlesBg'
 import Carousel from '../components/Carousel'
+import { useDiscord } from '../hooks/useDiscord'
 
 /* ── Sticker component ── */
 const STICKER_ANIM = [
@@ -139,9 +140,17 @@ const GAMES = [
 
 const STICKER_VARIANTS = [1, 2, 3, 4, 5, 6]
 
+const STATS = [
+  { label: 'AVATARS', value: '200+' },
+  { label: 'WORLDS', value: '3' },
+  { label: 'VIBES', value: '∞' },
+  { label: 'ENERGY', value: '★★★' },
+]
+
 export default function AboutMe() {
   const [loaded, setLoaded] = useState(false)
   const [activeStickerIdx, setActiveStickerIdx] = useState(0)
+  const { avatarUrl } = useDiscord()
 
   useEffect(() => {
     setTimeout(() => setLoaded(true), 100)
@@ -196,16 +205,46 @@ export default function AboutMe() {
         </a>
 
         {/* ── Header ── */}
-        <div style={{ textAlign: 'center', marginBottom: 36, position: 'relative' }}>
+        <div style={{ textAlign: 'center', marginBottom: 30, position: 'relative' }}>
+          {/* Avatar hero */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
+            <div style={{ position: 'relative', width: 96, height: 96 }}>
+              {/* rotating glow ring */}
+              <div style={{
+                position: 'absolute', inset: -6, borderRadius: 28,
+                background: 'conic-gradient(from 0deg, var(--primary), var(--pink), transparent, var(--primary))',
+                filter: 'blur(7px)', opacity: 0.55, animation: 'spin-slow 6s linear infinite',
+              }} />
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="reokiy" style={{
+                  position: 'relative', width: 96, height: 96, borderRadius: 26, objectFit: 'cover',
+                  border: '1px solid rgba(var(--pink-rgb),0.4)', animation: 'float 5s ease-in-out infinite',
+                }} />
+              ) : (
+                <div style={{
+                  position: 'relative', width: 96, height: 96, borderRadius: 26,
+                  background: 'linear-gradient(135deg, var(--primary), #2a1530)',
+                  border: '1px solid rgba(var(--pink-rgb),0.4)', animation: 'float 5s ease-in-out infinite',
+                }} />
+              )}
+              {/* online dot */}
+              <div style={{
+                position: 'absolute', right: 2, bottom: 2, width: 16, height: 16, borderRadius: '50%',
+                background: '#4ade80', border: '3px solid var(--bg)', boxShadow: '0 0 8px #4ade80',
+              }} />
+            </div>
+          </div>
+
           {/* Animated sticker showcase */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
             {STICKER_VARIANTS.map((v, i) => (
               <img
                 key={v}
                 src={`/emojis/reokichan 56 ${v}.png`}
                 alt={`reokichan ${v}`}
                 style={{
-                  width: 44, height: 44,
+                  width: 38, height: 38,
                   objectFit: 'contain',
                   opacity: activeStickerIdx === i ? 1 : 0.3,
                   transform: activeStickerIdx === i ? 'scale(1.3) translateY(-4px)' : 'scale(1)',
@@ -238,9 +277,24 @@ export default function AboutMe() {
             fontSize: 15,
             color: 'var(--text-muted)',
             lineHeight: 1.6,
+            marginBottom: 18,
           }}>
             Hewooo~ Im Reokiy ♥
           </p>
+
+          {/* Stat chips */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {STATS.map((s, i) => (
+              <div key={s.label} style={{
+                minWidth: 64, padding: '8px 14px', borderRadius: 14,
+                background: 'var(--glass)', border: '1px solid var(--glass-border)',
+                animation: `note-appear 0.5s ease ${0.1 + i * 0.08}s both`,
+              }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 18, color: 'var(--pink)', lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 7, letterSpacing: '0.14em', color: 'var(--text-muted)', marginTop: 4 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* ── Who am I ── */}

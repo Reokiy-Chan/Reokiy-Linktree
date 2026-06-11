@@ -8,3 +8,6 @@ data/visits.json
 .vercel
 .env*.local
 data/presence.json
+data/users.json
+data/settings.json
+public/uploads/
