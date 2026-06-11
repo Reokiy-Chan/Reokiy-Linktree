@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'   // ← añadido
 
-type Section = 'overview' | 'live' | 'traffic' | 'sessions' | 'codes' | 'giveaways' | 'settings'
+type Section = 'overview' | 'live' | 'traffic' | 'sessions' | 'codes' | 'giveaways' | 'settings' | 'users'
+type Permission = Section | 'HandleUsers' | 'HandleUserActions'
 
 const NAV: { href: string; label: string; icon: string; section: Section }[] = [
   { href: '/admin', label: 'Overview', icon: '◈', section: 'overview' },
@@ -20,7 +21,7 @@ interface LiveData { activeLastHour: number; todayTotal: number }
 interface Me {
   user: { id: string; username: string; name: string; avatar?: string }
   isRoot: boolean
-  permissions: Section[]
+  permissions: Permission[]
 }
 
 export default function AdminSidebar() {
@@ -125,8 +126,8 @@ export default function AdminSidebar() {
           </a>
         ))}
 
-        {/* Users — root only */}
-        {me?.isRoot && (
+        {/* Users — root + HandleUsers/HandleUserActions */}
+        {(me?.isRoot || me?.permissions.includes('HandleUsers') || me?.permissions.includes('HandleUserActions')) && (
           <a
             href="/admin/users"
             onClick={e => { e.preventDefault(); setOpen(false); router.push('/admin/users') }}

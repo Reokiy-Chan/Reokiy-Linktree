@@ -27,6 +27,7 @@ export interface RedeemCode {
   id: string
   code: string
   label: string
+  adminNote?: string
   rewardType: RewardType
   rewardContent: string
   rewardTitle?: string
@@ -171,6 +172,25 @@ export async function markUsed(id: string): Promise<boolean> {
   }
   fsWrite(codes)
   return true
+}
+
+export async function updateCode(id: string, patch: Partial<Pick<RedeemCode, 'rewardTitle' | 'adminNote' | 'label'>>): Promise<RedeemCode | null> {
+  if (USE_KV) {
+    const kv = await getRedis()
+    const raw = await kv.hget(KV_KEY, id)
+    if (!raw) return null
+    const code = typeof raw === 'string' ? JSON.parse(raw) as RedeemCode : raw as RedeemCode
+    const updated = { ...code, ...patch }
+    await kv.hset(KV_KEY, { [id]: JSON.stringify(updated) })
+    return updated
+  }
+  const codes = fsRead()
+  const idx = codes.findIndex(c => c.id === id)
+  if (idx === -1) return null
+  const updated = { ...codes[idx], ...patch }
+  codes[idx] = updated
+  fsWrite(codes)
+  return updated
 }
 
 export async function deleteCode(id: string): Promise<void> {

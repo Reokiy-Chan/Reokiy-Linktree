@@ -50,6 +50,48 @@ const KV_KEY = 'reokiy:raffles'
 
 const DATA_DIR     = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'data')
 const RAFFLES_FILE = path.join(DATA_DIR, 'raffles.json')
+const BLACKLIST_FILE = path.join(DATA_DIR, 'giveaway_blacklist.json')
+
+export interface BlacklistEntry {
+  username: string
+  reason?: string
+  addedAt: string
+  addedBy?: string
+}
+
+export async function getGlobalBlacklist(): Promise<BlacklistEntry[]> {
+  if (USE_KV) {
+    const { Redis } = await import('@upstash/redis')
+    const kv = Redis.fromEnv()
+    const data = await kv.get<BlacklistEntry[]>('giveaway:blacklist')
+    return data ?? []
+  }
+  if (!existsSync(BLACKLIST_FILE)) return []
+  try { return JSON.parse(readFileSync(BLACKLIST_FILE, 'utf-8')) as BlacklistEntry[] } catch { return [] }
+}
+
+export async function addToGlobalBlacklist(entry: BlacklistEntry): Promise<void> {
+  const list = await getGlobalBlacklist()
+  if (list.some(e => e.username.toLowerCase() === entry.username.toLowerCase())) return
+  const updated = [...list, { ...entry, username: entry.username.toLowerCase() }]
+  if (USE_KV) {
+    const { Redis } = await import('@upstash/redis')
+    await Redis.fromEnv().set('giveaway:blacklist', JSON.stringify(updated))
+  } else {
+    writeFileSync(BLACKLIST_FILE, JSON.stringify(updated, null, 2))
+  }
+}
+
+export async function removeFromGlobalBlacklist(username: string): Promise<void> {
+  const list = await getGlobalBlacklist()
+  const updated = list.filter(e => e.username.toLowerCase() !== username.toLowerCase())
+  if (USE_KV) {
+    const { Redis } = await import('@upstash/redis')
+    await Redis.fromEnv().set('giveaway:blacklist', JSON.stringify(updated))
+  } else {
+    writeFileSync(BLACKLIST_FILE, JSON.stringify(updated, null, 2))
+  }
+}
 
 function fsRead(): Raffle[] {
   try {
@@ -159,6 +201,10 @@ export async function enterRaffle(id: string, discordUsername: string): Promise<
   const banned = (raffle.bannedUsernames ?? []).map(b => b.toLowerCase())
   if (banned.includes(discordUsername.toLowerCase())) {
     return { ok: false, error: 'You cannot join this giveaway' }
+  }
+  const globalList = await getGlobalBlacklist()
+  if (globalList.some(e => e.username === discordUsername.toLowerCase())) {
+    return { ok: false, error: 'No puedes participar en este giveaway.' }
   }
   const newEntry: RaffleEntry = { discordUsername, enteredAt: new Date().toISOString() }
   await updateRaffle(id, { entries: [...raffle.entries, newEntry] })

@@ -6,9 +6,14 @@ import { hashPassword, verifyPassword } from './auth'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-// Sections that can be granted to a user. 'users' is root-only and never granted.
-export const SECTIONS = ['overview', 'live', 'traffic', 'sessions', 'codes', 'giveaways', 'settings'] as const
+export const SECTIONS = ['overview', 'live', 'traffic', 'sessions', 'codes', 'giveaways', 'settings', 'users'] as const
 export type Section = typeof SECTIONS[number]
+
+export const ACTION_PERMISSIONS = ['HandleUsers', 'HandleUserActions'] as const
+export type ActionPermission = typeof ACTION_PERMISSIONS[number]
+
+export const ALL_PERMISSIONS = [...SECTIONS, ...ACTION_PERMISSIONS] as const
+export type Permission = typeof ALL_PERMISSIONS[number]
 
 export interface WebAuthnCredential {
   id: string           // base64url — es el credentialID del autenticador
@@ -29,7 +34,7 @@ export interface AdminUser {
   otpHash?: string            // one-time password for first login (hashed)
   authMethod: 'password' | 'key' | 'webauthn'   // how they finished setup
   pendingSetup: boolean       // true until they set a password / key
-  permissions: Section[]      // granted sections (root implicitly has all)
+  permissions: Permission[]   // granted sections + action permissions (root implicitly has all)
   isRoot?: boolean
   createdAt: string
   createdBy?: string
@@ -50,7 +55,7 @@ export interface SafeUser {
   avatar?: string
   authMethod: 'password' | 'key' | 'webauthn'
   pendingSetup: boolean
-  permissions: Section[]
+  permissions: Permission[]
   isRoot?: boolean
   createdAt: string
   lastLogin?: string
@@ -152,7 +157,7 @@ export async function ensureRoot(): Promise<AdminUser> {
   if (!root) {
     root = {
       id: ROOT_ID, username: 'root', name: 'Root', authMethod: 'password',
-      pendingSetup: false, permissions: [...SECTIONS], isRoot: true,
+      pendingSetup: false, permissions: [...ALL_PERMISSIONS] as Permission[], isRoot: true,
       createdAt: new Date().toISOString(),
     }
     await writeOne(root)
@@ -197,7 +202,7 @@ export function genSecurityKey(): string {
 }
 
 export async function createUser(
-  input: { username: string; name: string; avatar?: string; permissions: Section[]; createdBy?: string }
+  input: { username: string; name: string; avatar?: string; permissions: Permission[]; createdBy?: string }
 ): Promise<{ ok: boolean; user?: AdminUser; otp?: string; error?: string }> {
   const username = input.username.trim().toLowerCase()
   if (!username || !/^[a-z0-9_.-]{2,24}$/.test(username)) {
@@ -215,7 +220,7 @@ export async function createUser(
     otpHash: await hashPassword(otp),          // ← async
     authMethod: 'password',
     pendingSetup: true,
-    permissions: input.permissions.filter(p => SECTIONS.includes(p)),
+    permissions: input.permissions.filter(p => (ALL_PERMISSIONS as readonly string[]).includes(p)),
     createdAt: new Date().toISOString(),
     createdBy: input.createdBy,
   }

@@ -952,9 +952,13 @@ export default function RafflesPage() {
   const [viewing, setViewing] = useState<Raffle | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [duplicating, setDuplicating] = useState<string | null>(null)
-  const [activeFilter, setActiveFilter] = useState<'todos' | 'active' | 'ended'>('todos')
+  const [activeFilter, setActiveFilter] = useState<'todos' | 'active' | 'ended' | 'blacklist'>('todos')
   const [detailRaffle, setDetailRaffle] = useState<Raffle | null>(null)
   const esRef = useRef<EventSource | null>(null)
+  const [globalBlacklist, setGlobalBlacklist] = useState<{ username: string; reason?: string; addedAt: string; addedBy?: string }[]>([])
+  const [blInput, setBlInput] = useState('')
+  const [blReason, setBlReason] = useState('')
+  const [blLoading, setBlLoading] = useState(false)
 
   useEffect(() => {
     const es = new EventSource('/api/admin/raffles/stream')
@@ -983,6 +987,35 @@ export default function RafflesPage() {
 
     return () => { es.close(); esRef.current = null }
   }, [router])
+
+  useEffect(() => {
+    fetch('/api/admin/raffles/blacklist')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.blacklist) setGlobalBlacklist(d.blacklist) })
+      .catch(() => {})
+  }, [])
+
+  const addToBlacklist = async () => {
+    if (!blInput.trim()) return
+    setBlLoading(true)
+    const r = await fetch('/api/admin/raffles/blacklist', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: blInput.trim(), reason: blReason.trim() || undefined }),
+    })
+    if (r.ok) {
+      setGlobalBlacklist(prev => [...prev, { username: blInput.trim().toLowerCase(), reason: blReason.trim() || undefined, addedAt: new Date().toISOString() }])
+      setBlInput(''); setBlReason('')
+    }
+    setBlLoading(false)
+  }
+
+  const removeFromBlacklist = async (username: string) => {
+    await fetch('/api/admin/raffles/blacklist', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
+    })
+    setGlobalBlacklist(prev => prev.filter(e => e.username !== username))
+  }
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this giveaway?')) return
@@ -1059,9 +1092,57 @@ export default function RafflesPage() {
               {f === 'todos' ? `todos (${raffles.length})` : f === 'active' ? `en curso (${activeCount})` : `finalizados (${endedCount})`}
             </button>
           ))}
+          <button
+            onClick={() => setActiveFilter('blacklist')}
+            style={{
+              padding: '5px 12px', borderRadius: 20,
+              border: `1px solid ${activeFilter === 'blacklist' ? 'rgba(255,165,0,0.5)' : 'rgba(255,255,255,0.08)'}`,
+              background: activeFilter === 'blacklist' ? 'rgba(255,165,0,0.1)' : 'transparent',
+              color: activeFilter === 'blacklist' ? 'rgba(255,165,0,0.9)' : 'var(--text-muted)',
+              fontFamily: 'var(--font-body)', fontSize: 9, cursor: 'pointer', letterSpacing: '0.08em',
+            }}
+          >
+            ⛔ blacklist global ({globalBlacklist.length})
+          </button>
         </div>
 
-        {loading ? (
+        {activeFilter === 'blacklist' ? (
+          <div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+              <input value={blInput} onChange={e => setBlInput(e.target.value)} placeholder="@discord_username"
+                style={{ flex: 1, minWidth: 120, padding: '8px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,20,40,0.2)', borderRadius: 8, color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 11, outline: 'none', boxSizing: 'border-box' }}
+                onKeyDown={e => { if (e.key === 'Enter') addToBlacklist() }}
+              />
+              <input value={blReason} onChange={e => setBlReason(e.target.value)} placeholder="motivo (opcional)"
+                style={{ flex: 1.5, minWidth: 160, padding: '8px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,20,40,0.2)', borderRadius: 8, color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 11, outline: 'none', boxSizing: 'border-box' }}
+              />
+              <button onClick={addToBlacklist} disabled={blLoading || !blInput.trim()} style={{ padding: '8px 16px', background: 'rgba(255,165,0,0.15)', border: '1px solid rgba(255,165,0,0.35)', borderRadius: 8, color: 'rgba(255,165,0,0.9)', fontFamily: 'var(--font-body)', fontSize: 10, cursor: 'pointer', letterSpacing: '0.08em' }}>
+                + añadir
+              </button>
+            </div>
+            {globalBlacklist.length === 0 ? (
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(254,240,244,0.2)', textAlign: 'center', padding: '24px 0' }}>blacklist vacía</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {globalBlacklist.map(entry => (
+                  <div key={entry.username} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 9 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(254,240,244,0.7)' }}>@{entry.username}</div>
+                      {entry.reason && <div style={{ fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(254,240,244,0.3)', marginTop: 2 }}>{entry.reason}</div>}
+                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 7, color: 'rgba(254,240,244,0.2)', marginTop: 1 }}>
+                        añadido {new Date(entry.addedAt).toLocaleDateString('es-ES')}{entry.addedBy ? ` por @${entry.addedBy}` : ''}
+                      </div>
+                    </div>
+                    <button onClick={() => removeFromBlacklist(entry.username)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, padding: '4px 9px', color: 'rgba(254,240,244,0.35)', fontFamily: 'var(--font-body)', fontSize: 9, cursor: 'pointer' }}>✕ quitar</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ marginTop: 14, padding: '10px 12px', background: 'rgba(255,165,0,0.05)', border: '1px solid rgba(255,165,0,0.2)', borderRadius: 8, fontFamily: 'var(--font-body)', fontSize: 8, color: 'rgba(255,165,0,0.65)', lineHeight: 1.6 }}>
+              ⚠ los usuarios aquí no pueden participar en ningún giveaway activo ni futuro hasta ser eliminados de esta lista. esta blacklist es global e independiente de las blacklists por raffle.
+            </div>
+          </div>
+        ) : loading ? (
           <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(254,240,244,0.3)', textAlign: 'center', paddingTop: 60, letterSpacing: '0.1em' }}>loading…</div>
         ) : filteredRaffles.length === 0 ? (
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(196,20,40,0.2)', borderRadius: 12, padding: '48px 24px', textAlign: 'center' }}>

@@ -127,6 +127,46 @@ function GiftBoxPreview({
   )
 }
 
+function CodeEditInline({ code, onSaved, onCancel }: { code: RedeemCode; onSaved: (c: RedeemCode) => void; onCancel: () => void }) {
+  const [rewardTitle, setRewardTitle] = useState(code.rewardTitle ?? '')
+  const [adminNote, setAdminNote] = useState(code.adminNote ?? code.label ?? '')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+  const fieldStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 11px', boxSizing: 'border-box',
+    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,20,40,0.2)',
+    borderRadius: 7, color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 11, outline: 'none',
+  }
+  const save = async () => {
+    setSaving(true); setErr('')
+    const r = await fetch(`/api/admin/codes/${code.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rewardTitle: rewardTitle.trim(), adminNote: adminNote.trim() }),
+    })
+    const d = await r.json()
+    if (r.ok) onSaved(d.code)
+    else setErr(d.error ?? 'Error al guardar')
+    setSaving(false)
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div>
+        <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>título</label>
+        <input value={rewardTitle} onChange={e => setRewardTitle(e.target.value)} style={fieldStyle} />
+      </div>
+      <div>
+        <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>nota admin</label>
+        <input value={adminNote} onChange={e => setAdminNote(e.target.value)} style={fieldStyle} />
+      </div>
+      {err && <div style={{ ...S, fontSize: 10, color: '#f87171' }}>{err}</div>}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button onClick={onCancel} style={{ ...S, flex: 1, padding: '8px 0', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, color: 'rgba(254,240,244,0.5)', fontSize: 9, cursor: 'pointer' }}>cancelar</button>
+        <button onClick={save} disabled={saving} style={{ ...S, flex: 2, padding: '8px 0', background: 'rgba(196,20,40,0.2)', border: '1px solid rgba(196,20,40,0.4)', borderRadius: 7, color: 'var(--text)', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>{saving ? 'guardando…' : 'guardar'}</button>
+      </div>
+    </div>
+  )
+}
+
 function CodeDetailModal({
   code, onClose, onUpdated, onDeleted,
 }: {
@@ -163,9 +203,7 @@ function CodeDetailModal({
         </div>
 
         {editing ? (
-          // Reusar el componente Modal existente pero en modo edición
-          // Pasar code como initial y onCreated como onUpdated
-          <CodeEditForm code={code} onSaved={c => { onUpdated(c); setEditing(false) }} onCancel={() => setEditing(false)} />
+          <CodeEditInline code={code} onSaved={c => { onUpdated(c); setEditing(false) }} onCancel={() => setEditing(false)} />
         ) : (
           <CodeDetailView code={code} onDelete={handleDelete} deleting={deleting} />
         )}
@@ -367,6 +405,21 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
     position: 'absolute', top: 3, left: on ? 21 : 3,
     width: 16, height: 16, borderRadius: '50%',
     background: '#fff', transition: 'left 0.2s',
+  })
+
+  const nextBtnStyle: React.CSSProperties = {
+    ...S, padding: '9px 20px', background: 'rgba(196,20,40,0.2)', border: '1px solid rgba(196,20,40,0.4)',
+    borderRadius: 8, color: 'var(--text)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
+    cursor: 'pointer', opacity: 1,
+  }
+  const backBtnStyle: React.CSSProperties = {
+    ...S, padding: '9px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 8, color: 'rgba(254,240,244,0.5)', fontSize: 10, cursor: 'pointer',
+  }
+  const primaryBtn = (disabled: boolean): React.CSSProperties => ({
+    ...S, padding: '9px 22px', background: disabled ? 'rgba(196,20,40,0.08)' : 'rgba(196,20,40,0.25)',
+    border: '1px solid rgba(196,20,40,0.4)', borderRadius: 8, color: disabled ? 'var(--text-muted)' : 'var(--text)',
+    fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase' as const, cursor: disabled ? 'not-allowed' : 'pointer',
   })
 
   return (
@@ -667,7 +720,7 @@ export default function CodesPage() {
     return codes
   }, [codes, activeFilter])
 
-  const usedCount  = codes.filter(c => c.used || (c.maxUses !== null && (c.useCount ?? 0) >= c.maxUses)).length
+  const usedCount  = codes.filter(c => c.used || (c.maxUses != null && (c.useCount ?? 0) >= c.maxUses)).length
   const activeCount = codes.length - usedCount
 
   const relativeTime = (dateStr: string) => {
@@ -750,7 +803,7 @@ export default function CodesPage() {
             {/* Grid de cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
               {filteredCodes.map(code => {
-                const isExhausted = code.used || (code.maxUses !== null && (code.useCount ?? 0) >= code.maxUses)
+                const isExhausted = code.used || (code.maxUses != null && (code.useCount ?? 0) >= code.maxUses)
                 return (
                   <div
                     key={code.id}
@@ -793,7 +846,7 @@ export default function CodesPage() {
                         <Badge type={code.rewardType} used={isExhausted} />
                       </div>
                       <div style={{ display: 'flex', gap: 10, fontSize: 8, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
-                        {code.maxUses === null
+                        {code.maxUses == null
                           ? <span>∞ ilimitado</span>
                           : code.maxUses === 1
                           ? <span>uso único</span>
@@ -802,12 +855,12 @@ export default function CodesPage() {
                         <span>{relativeTime(code.createdAt)}</span>
                       </div>
                       {/* Barra de progreso para multi-use finito */}
-                      {code.maxUses !== null && code.maxUses > 1 && (
+                      {code.maxUses != null && code.maxUses > 1 && (
                         <div style={{ height: 2, background: 'rgba(255,255,255,0.06)', borderRadius: 1, marginTop: 7, overflow: 'hidden' }}>
                           <div style={{
                             height: '100%', borderRadius: 1,
-                            width: `${Math.min(100, ((code.useCount ?? 0) / code.maxUses) * 100)}%`,
-                            background: ((code.useCount ?? 0) >= code.maxUses) ? 'rgba(255,255,255,0.2)' : 'var(--primary)',
+                            width: `${Math.min(100, ((code.useCount ?? 0) / code.maxUses!) * 100)}%`,
+                            background: ((code.useCount ?? 0) >= code.maxUses!) ? 'rgba(255,255,255,0.2)' : 'var(--primary)',
                             transition: 'width 0.4s',
                           }} />
                         </div>
