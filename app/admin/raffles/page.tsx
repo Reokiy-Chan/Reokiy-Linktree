@@ -756,6 +756,190 @@ function ParticipantsDrawer({
   )
 }
 
+// ─── Detail Modal (nuevo) ─────────────────────────────────────────────────────
+
+function RaffleDetailModal({
+  raffle,
+  onClose,
+  onEdit,
+  onDelete,
+  onViewParticipants,
+}: {
+  raffle: Raffle
+  onClose: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onViewParticipants: () => void
+}) {
+  const winners = raffle.winners ?? []
+  const maxWinners = raffle.maxWinners ?? 1
+  const isActive = raffle.status === 'active'
+  const isEnded = raffle.status === 'ended'
+  const statusColor = isActive ? '#4ade80' : 'rgba(255,255,255,0.3)'
+  const statusLabel = isActive ? 'ACTIVO' : 'FINALIZADO'
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(5,0,7,0.85)',
+        backdropFilter: 'blur(8px)',
+        padding: 16,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 460,
+          background: '#0a0010',
+          border: '1px solid rgba(196,20,40,0.3)',
+          borderRadius: 16,
+          padding: 24,
+          maxHeight: '90vh',
+          overflowY: 'auto',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+          <span style={{ ...S, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.75)' }}>
+            detalles del sorteo
+          </span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={onEdit}
+              style={{
+                ...S,
+                padding: '5px 10px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(196,20,40,0.3)',
+                borderRadius: 6,
+                color: 'rgba(196,20,40,0.8)',
+                fontSize: 9,
+                cursor: 'pointer',
+              }}
+            >
+              ✎ editar
+            </button>
+            <button
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', color: 'rgba(254,240,244,0.35)', cursor: 'pointer', fontSize: 16 }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 20, color: 'var(--text)', marginBottom: 10 }}>
+          {raffle.title}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 14px', ...S, fontSize: 10, marginBottom: 20 }}>
+          <span style={{ color: 'rgba(254,240,244,0.35)' }}>Estado</span>
+          <span style={{ color: statusColor }}>{statusLabel}</span>
+
+          <span style={{ color: 'rgba(254,240,244,0.35)' }}>Creado</span>
+          <span style={{ color: 'rgba(254,240,244,0.3)' }}>{new Date(raffle.createdAt).toLocaleDateString('es-ES')}</span>
+
+          {raffle.endsAt && (
+            <>
+              <span style={{ color: 'rgba(254,240,244,0.35)' }}>Finaliza</span>
+              <span style={{ color: 'rgba(254,240,244,0.3)' }}>{new Date(raffle.endsAt).toLocaleString('es-ES')}</span>
+            </>
+          )}
+
+          <span style={{ color: 'rgba(254,240,244,0.35)' }}>Participantes</span>
+          <span style={{ color: 'var(--text)' }}>{raffle.entries.length}</span>
+
+          <span style={{ color: 'rgba(254,240,244,0.35)' }}>Ganadores</span>
+          <span style={{ color: 'var(--text)' }}>{winners.length}/{maxWinners}</span>
+        </div>
+
+        {raffle.description && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.35)', marginBottom: 4 }}>Descripción</div>
+            <div style={{ ...S, fontSize: 10, color: 'rgba(254,240,244,0.6)', lineHeight: 1.4 }}>{raffle.description}</div>
+          </div>
+        )}
+
+        {raffle.prizes.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.35)', marginBottom: 6 }}>Premios</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {raffle.prizes.map((prize, i) => (
+                <div
+                  key={i}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 20,
+                    border: '1px solid rgba(196,20,40,0.3)',
+                    fontSize: 9,
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  {prize.label}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {winners.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.35)', marginBottom: 6 }}>Ganadores</div>
+            {winners.map((w, i) => (
+              <div key={i} style={{ ...S, fontSize: 10, color: '#ffd700', marginBottom: 4 }}>
+                🏆 {w.discordUsername} {w.prizeLabel && `→ ${w.prizeLabel}`}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button
+            onClick={onViewParticipants}
+            style={{
+              flex: 1,
+              ...S,
+              padding: '8px 0',
+              background: 'rgba(196,20,40,0.18)',
+              border: '1px solid rgba(196,20,40,0.4)',
+              borderRadius: 8,
+              color: 'var(--text)',
+              fontSize: 10,
+              letterSpacing: '0.08em',
+              cursor: 'pointer',
+            }}
+          >
+            Ver participantes
+          </button>
+          <button
+            onClick={onDelete}
+            style={{
+              flex: 1,
+              ...S,
+              padding: '8px 0',
+              background: 'none',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 8,
+              color: 'rgba(254,240,244,0.5)',
+              fontSize: 10,
+              cursor: 'pointer',
+            }}
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function RafflesPage() {
@@ -769,6 +953,7 @@ export default function RafflesPage() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [duplicating, setDuplicating] = useState<string | null>(null)
   const [activeFilter, setActiveFilter] = useState<'todos' | 'active' | 'ended'>('todos')
+  const [detailRaffle, setDetailRaffle] = useState<Raffle | null>(null)
   const esRef = useRef<EventSource | null>(null)
 
   useEffect(() => {
@@ -814,27 +999,6 @@ export default function RafflesPage() {
     const data = await res.json()
     if (res.ok) setRaffles(prev => [data.raffle, ...prev])
     setDuplicating(null)
-  }
-
-  const pickWinner = async (raffleId: string, prizeId?: string) => {
-    // esta función se usa dentro del drawer; el botón "Elegir" abre el drawer
-    // pero conservamos la lógica original que abría directamente el pick.
-    // Para mantener consistencia, simplemente abrimos el drawer y dentro se maneja.
-    const raffle = raffles.find(r => r.id === raffleId)
-    if (raffle) setViewing(raffle)
-  }
-
-  const launchRaffle = async (id: string) => {
-    // Cambiar estado de 'draft' a 'active' (si existe campo draft)
-    const res = await fetch(`/api/admin/raffles/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'active' }),
-    })
-    if (res.ok) {
-      const data = await res.json()
-      setRaffles(prev => prev.map(r => r.id === id ? data.raffle : r))
-    }
   }
 
   const filteredRaffles = useMemo(() => {
@@ -908,25 +1072,32 @@ export default function RafflesPage() {
           filteredRaffles.map(raffle => {
             const isLive = raffle.status === 'active' && (!raffle.pickedAt && !raffle.endsAt)
             const isDone = raffle.status === 'ended'
-            const isDraft = raffle.status === 'draft'
-            const statusColor = isDone ? 'rgba(255,255,255,0.18)' : isDraft ? '#fbbf24' : '#4ade80'
-            const statusLabel = isDone ? 'FINALIZADO' : isDraft ? 'BORRADOR' : 'EN CURSO'
+            const statusColor = isDone ? 'rgba(255,255,255,0.18)' : '#4ade80'
+            const statusLabel = isDone ? 'FINALIZADO' : 'EN CURSO'
             const participantCount = raffle.entries?.length ?? 0
             const now = Date.now()
             const endsAt = raffle.endsAt ? new Date(raffle.endsAt).getTime() : null
             const createdAt = new Date(raffle.createdAt).getTime()
-            const totalSpan = endsAt ? endsAt - createdAt : null
             const elapsed = endsAt ? Math.min(1, (now - createdAt) / (endsAt - createdAt)) : null
             const winners = raffle.winners ?? []
             const maxWinners = raffle.maxWinners ?? 1
-            const allWinnersPicked = winners.length >= maxWinners
 
             return (
-              <div key={raffle.id} style={{
-                border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
-                marginBottom: 10, overflow: 'hidden', background: 'rgba(12,0,16,0.7)',
-                transition: 'border-color 0.2s',
-              }}>
+              <div
+                key={raffle.id}
+                onClick={() => setDetailRaffle(raffle)}
+                style={{
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 12,
+                  marginBottom: 10,
+                  overflow: 'hidden',
+                  background: 'rgba(12,0,16,0.7)',
+                  transition: 'border-color 0.2s',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(196,20,40,0.4)')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+              >
                 {/* Header con estado y acciones */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px' }}>
                   <div style={{
@@ -942,7 +1113,7 @@ export default function RafflesPage() {
                       </span>
                       <span style={{
                         fontSize: 7, padding: '2px 7px', borderRadius: 10, letterSpacing: '0.1em',
-                        background: isDone ? 'rgba(255,255,255,0.05)' : isDraft ? 'rgba(251,191,36,0.12)' : 'rgba(74,222,128,0.12)',
+                        background: isDone ? 'rgba(255,255,255,0.05)' : 'rgba(74,222,128,0.12)',
                         color: statusColor, border: `1px solid ${statusColor}40`,
                       }}>
                         {statusLabel}
@@ -957,8 +1128,8 @@ export default function RafflesPage() {
                       <span>🏆 {raffle.prizes?.length ?? 1} {(raffle.prizes?.length ?? 1) === 1 ? 'premio' : 'premios'}</span>
                     </div>
                   </div>
-                  {/* Botones de acción rápida */}
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  {/* Botones de acción rápida - evitamos propagación para que no abran el modal */}
+                  <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
                     {!isDone && (
                       <button onClick={() => setViewing(raffle)} style={BTN_GHOST}>
                         🎯 Elegir
@@ -967,11 +1138,6 @@ export default function RafflesPage() {
                     {isDone && (
                       <button onClick={() => handleDuplicate(raffle.id)} disabled={duplicating === raffle.id} style={BTN_GHOST}>
                         {duplicating === raffle.id ? '…' : '📋 Duplicar'}
-                      </button>
-                    )}
-                    {isDraft && (
-                      <button onClick={() => launchRaffle(raffle.id)} style={BTN_RED}>
-                        ▶ Lanzar
                       </button>
                     )}
                     <button onClick={() => { setEditing(raffle); setShowModal(true) }} style={BTN_GHOST} title="Editar">
@@ -1060,6 +1226,28 @@ export default function RafflesPage() {
         />
       )}
 
+      {detailRaffle && (
+        <RaffleDetailModal
+          raffle={detailRaffle}
+          onClose={() => setDetailRaffle(null)}
+          onEdit={() => {
+            setDetailRaffle(null)
+            setEditing(detailRaffle)
+            setShowModal(true)
+          }}
+          onDelete={async () => {
+            if (confirm(`¿Eliminar el sorteo "${detailRaffle.title}"?`)) {
+              await handleDelete(detailRaffle.id)
+              setDetailRaffle(null)
+            }
+          }}
+          onViewParticipants={() => {
+            setDetailRaffle(null)
+            setViewing(detailRaffle)
+          }}
+        />
+      )}
+
       <style>{`
         @keyframes pulse-dot { 0%,100% { opacity:1; transform:scale(1) } 50% { opacity:0.4; transform:scale(0.75) } }
       `}</style>
@@ -1072,10 +1260,6 @@ const BTN_GHOST: React.CSSProperties = {
   background: 'none', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6,
   padding: '5px 10px', fontSize: 9, fontFamily: 'var(--font-body)', color: 'rgba(254,240,244,0.5)',
   cursor: 'pointer', transition: 'all 0.15s',
-}
-const BTN_RED: React.CSSProperties = {
-  ...BTN_GHOST,
-  borderColor: 'rgba(196,20,40,0.4)', color: 'rgba(196,20,40,0.8)',
 }
 const BTN_DELETE: React.CSSProperties = {
   ...BTN_GHOST,

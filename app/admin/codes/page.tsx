@@ -196,41 +196,62 @@ function CodeDetailView({ code, onDelete, deleting }: { code: RedeemCode; onDele
   )
 }
 
+function StepBar({ current }: { current: number }) {
+  const labels = ['código', 'tipo', 'contenido', 'presentación']
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+        {[1,2,3,4].map(n => (
+          <div key={n} style={{ flex: 1, height: 3, borderRadius: 2, background: n < current ? 'rgba(196,20,40,0.7)' : n === current ? '#c41428' : 'rgba(255,255,255,0.08)' }} />
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 8, ...S, fontSize: 8 }}>
+        {labels.map((l, i) => (
+          <span key={l} style={{ color: i + 1 === current ? '#fee0f4' : i + 1 < current ? 'rgba(196,20,40,0.5)' : 'rgba(254,240,244,0.2)', flex: 1 }}>
+            {i + 1 < current ? '✓ ' : ''}{l}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: RedeemCode) => void }) {
-  const [step, setStep] = useState<'form' | 'done'>('form')
+  type WizardStep = 1 | 2 | 3 | 4 | 'done'
+  const [step, setStep] = useState<WizardStep>(1)
   const [rewardType, setRewardType] = useState<RewardType>('text')
-  const [code, setCode]             = useState('')
-  const [label, setLabel]           = useState('')
+  const [code, setCode] = useState('')
+  const [label, setLabel] = useState('')
   const [rewardTitle, setRewardTitle] = useState('')
   const [rewardContent, setRewardContent] = useState('')
-  const [imgFile, setImgFile]       = useState<File | null>(null)
+  const [imgFile, setImgFile] = useState<File | null>(null)
   const [imgPreview, setImgPreview] = useState<string | null>(null)
-  const [uploading, setUploading]   = useState(false)
-  const [saving, setSaving]         = useState(false)
-  const [error, setError]           = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   // Gift animation
-  const [giftAnimation, setGiftAnimation]     = useState(false)
-  const [giftStyle, setGiftStyle]             = useState<GiftStyle>('modern')
-  const [giftBoxColor, setGiftBoxColor]       = useState('#c41428')
+  const [giftAnimation, setGiftAnimation] = useState(false)
+  const [giftStyle, setGiftStyle] = useState<GiftStyle>('modern')
+  const [giftBoxColor, setGiftBoxColor] = useState('#c41428')
   const [giftRibbonColor, setGiftRibbonColor] = useState('#fef0f4')
-  const [giftPattern, setGiftPattern]         = useState<GiftPattern>('none')
+  const [giftPattern, setGiftPattern] = useState<GiftPattern>('none')
   const [giftPatternColor, setGiftPatternColor] = useState('#ffffff')
   const [giftPatternImage, setGiftPatternImage] = useState<string | null>(null)
-  const [patternFile, setPatternFile]           = useState<File | null>(null)
+  const [patternFile, setPatternFile] = useState<File | null>(null)
 
   // Scratch card
-  const [scratchCard, setScratchCard]           = useState(false)
-  const [scratchStyle, setScratchStyle]         = useState<ScratchStyle>('lottery')
+  const [scratchCard, setScratchCard] = useState(false)
+  const [scratchStyle, setScratchStyle] = useState<ScratchStyle>('lottery')
   const [scratchCardColor, setScratchCardColor] = useState('#2a1a2e')
   const [scratchCardLabel, setScratchCardLabel] = useState('')
   const [scratchDifficulty, setScratchDifficulty] = useState<ScratchDifficulty>('normal')
 
   // Multi-use
-  const [maxUsesMode, setMaxUsesMode]   = useState<'single' | 'multi' | 'unlimited'>('single')
+  const [maxUsesMode, setMaxUsesMode] = useState<'single' | 'multi' | 'unlimited'>('single')
   const [maxUsesCount, setMaxUsesCount] = useState('5')
 
-  const fileRef        = useRef<HTMLInputElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const patternFileRef = useRef<HTMLInputElement>(null)
 
   const genCode = () => {
@@ -249,15 +270,13 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
     setGiftPatternImage(URL.createObjectURL(f))
   }
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const submit = async () => {
     setError('')
     if (!code.trim()) { setError('Code is required'); return }
 
     let content = rewardContent.trim()
     let patternImageUrl = giftPatternImage
 
-    // Upload reward image if needed
     if (rewardType === 'image' && imgFile) {
       setUploading(true)
       try {
@@ -273,7 +292,6 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
       setUploading(false)
     }
 
-    // Upload pattern image if custom
     if (giftPattern === 'custom' && patternFile) {
       setUploading(true)
       try {
@@ -332,7 +350,7 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
     outline: 'none', transition: 'border-color 0.15s',
   }
   const focusStyle = { borderColor: 'rgba(196,20,40,0.5)' }
-  const blurStyle  = { borderColor: 'rgba(196,20,40,0.2)' }
+  const blurStyle = { borderColor: 'rgba(196,20,40,0.2)' }
 
   const ALL_TYPES: RewardType[] = ['text', 'link', 'image', 'fansly']
 
@@ -378,424 +396,234 @@ function Modal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Red
               <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(254,240,244,0.35)', cursor: 'pointer', fontSize: 16 }}>✕</button>
             </div>
 
-            <div  onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <StepBar current={step as number} />
 
-              {/* ── Code ── */}
-              <div>
-                <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Code</label>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <input
-                    value={code} onChange={e => setCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. SUMM3R24"
-                    style={{ ...fieldStyle, flex: 1, fontFamily: 'monospace', letterSpacing: '0.1em', fontSize: 13 }}
-                    onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
-                    onBlur={e => Object.assign(e.currentTarget.style, blurStyle)}
-                  />
-                  <button type="button" onClick={genCode} style={{ ...S, padding: '0 12px', background: 'rgba(196,20,40,0.1)', border: '1px solid rgba(196,20,40,0.25)', borderRadius: 8, color: 'rgba(254,240,244,0.6)', fontSize: 10, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                    generate
-                  </button>
-                </div>
-              </div>
-
-              {/* ── Admin label ── */}
-              <div>
-                <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Admin note (optional)</label>
-                <input value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Summer giveaway"
-                  style={fieldStyle}
-                  onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
-                  onBlur={e => Object.assign(e.currentTarget.style, blurStyle)}
-                />
-              </div>
-
-              {/* ── Reward type ── */}
-              <div>
-                <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Reward type</label>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {ALL_TYPES.map(t => (
-                    <button key={t} type="button"
-                      onClick={() => { setRewardType(t); setRewardContent(''); setImgFile(null); setImgPreview(null) }}
-                      style={{
-                        ...S, flex: '1 1 calc(25% - 6px)', minWidth: 64, padding: '7px 0', borderRadius: 8, cursor: 'pointer', fontSize: 9,
-                        letterSpacing: '0.08em', textTransform: 'uppercase',
-                        background: rewardType === t ? `${BADGE[t].color}22` : 'rgba(255,255,255,0.03)',
-                        border: `1px solid ${rewardType === t ? BADGE[t].color + '66' : 'rgba(255,255,255,0.08)'}`,
-                        color: rewardType === t ? BADGE[t].color : 'rgba(254,240,244,0.4)',
-                        transition: 'all 0.15s',
-                      }}
-                    >{t}</button>
-                  ))}
-                </div>
-                <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.22)', marginTop: 6, letterSpacing: '0.06em' }}>
-                  {rewardType === 'fansly' && '✦ Users will scratch a card to reveal the code'}
-                  {rewardType === 'link'   && '✦ A button to open the URL will be shown'}
-                  {rewardType === 'image'  && '✦ The image will be displayed to the user'}
-                  {rewardType === 'text'   && '✦ The text message will be displayed to the user'}
-                </div>
-              </div>
-
-              {/* ── Reward title ── */}
-              <div>
-                <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Reward title (shown to user)</label>
-                <input value={rewardTitle} onChange={e => setRewardTitle(e.target.value)} placeholder="e.g. Special access link"
-                  style={fieldStyle}
-                  onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
-                  onBlur={e => Object.assign(e.currentTarget.style, blurStyle)}
-                />
-              </div>
-
-              {/* ── Reward content: TEXT ── */}
-              {rewardType === 'text' && (
-                <div>
-                  <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Text content</label>
-                  <textarea value={rewardContent} onChange={e => setRewardContent(e.target.value)}
-                    placeholder="The message the user will see…" rows={3}
-                    style={{ ...fieldStyle, resize: 'vertical', lineHeight: 1.5 }}
-                    onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
-                    onBlur={e => Object.assign(e.currentTarget.style, blurStyle)}
-                  />
-                </div>
-              )}
-
-              {/* ── Reward content: LINK ── */}
-              {rewardType === 'link' && (
-                <div>
-                  <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>URL</label>
-                  <input value={rewardContent} onChange={e => setRewardContent(e.target.value)}
-                    placeholder="https://…" type="url"
-                    style={fieldStyle}
-                    onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
-                    onBlur={e => Object.assign(e.currentTarget.style, blurStyle)}
-                  />
-                </div>
-              )}
-
-              {/* ── Reward content: IMAGE ── */}
-              {rewardType === 'image' && (
-                <div>
-                  <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Image</label>
-                  <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
-                    onChange={e => { const f = e.target.files?.[0]; if (f) pickFile(f) }}
-                  />
-                  {imgPreview ? (
-                    <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(196,20,40,0.25)', marginBottom: 6 }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={imgPreview} alt="preview" style={{ width: '100%', maxHeight: 160, objectFit: 'cover', display: 'block' }} />
-                      <button type="button" onClick={() => { setImgFile(null); setImgPreview(null) }}
-                        style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(5,0,7,0.8)', border: 'none', borderRadius: 4, color: 'var(--text)', cursor: 'pointer', padding: '2px 6px', fontSize: 11 }}>
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => fileRef.current?.click()}
-                      style={{
-                        ...S, border: '2px dashed rgba(196,20,40,0.25)', borderRadius: 8,
-                        padding: '24px 16px', textAlign: 'center', cursor: 'pointer',
-                        fontSize: 10, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em',
-                        transition: 'border-color 0.15s',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(196,20,40,0.5)')}
-                      onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(196,20,40,0.25)')}
-                    >
-                      click to upload · jpeg, png, gif, webp · max 10 MB<br />
-                      <span style={{ fontSize: 8, opacity: 0.5 }}>stored in Vercel Blob</span>
-                    </div>
-                  )}
-                  <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.25)', marginTop: 4 }}>or paste a URL instead:</div>
-                  <input value={rewardContent} onChange={e => { setRewardContent(e.target.value); if (e.target.value) { setImgFile(null); setImgPreview(null) } }}
-                    placeholder="https://i.imgur.com/…" type="url"
-                    style={{ ...fieldStyle, marginTop: 6 }}
-                    onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
-                    onBlur={e => Object.assign(e.currentTarget.style, blurStyle)}
-                  />
-                </div>
-              )}
-
-              {/* ── Reward content: FANSLY ── */}
-              {rewardType === 'fansly' && (
-                <div>
-                  <label style={{ ...S, fontSize: 9, color: BADGE.fansly.color, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>
-                    Fansly subscription code
-                  </label>
-                  <input
-                    value={rewardContent}
-                    onChange={e => setRewardContent(e.target.value)}
-                    placeholder="e.g. FANSLY-XXXX-XXXX"
-                    style={{ ...fieldStyle, fontFamily: 'monospace', letterSpacing: '0.08em', borderColor: `${BADGE.fansly.color}33` }}
-                    onFocus={e => (e.currentTarget.style.borderColor = `${BADGE.fansly.color}77`)}
-                    onBlur={e => (e.currentTarget.style.borderColor = `${BADGE.fansly.color}33`)}
-                  />
-                  <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginTop: 5 }}>
-                    The user will need to scratch the card to reveal this code ✦
-                  </div>
-                </div>
-              )}
-
-              {/* ── Gift animation section ── */}
-              <div style={sectionStyle}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: giftAnimation ? 14 : 0 }}>
+            {step === 1 && (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div>
-                    <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)', marginBottom: 2 }}>
-                      🎁 gift box animation
-                    </div>
-                    <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)' }}>
-                      Show an animated gift that the user must open
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => setGiftAnimation(v => !v)} style={toggleStyle(giftAnimation)} aria-label="Toggle gift animation">
-                    <span style={toggleKnob(giftAnimation)} />
-                  </button>
-                </div>
-
-                {giftAnimation && (
-                  <>
-                    {/* Gift style: modern vs legacy */}
-                    <div style={{ marginBottom: 12 }}>
-                      <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Gift style</label>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        {([
-                          { v: 'modern', label: 'Modern', desc: 'new rounded look' },
-                          { v: 'legacy', label: 'Legacy aspect gift', desc: 'original design' },
-                        ] as const).map(o => (
-                          <button key={o.v} type="button" onClick={() => setGiftStyle(o.v)}
-                            style={{
-                              flex: 1, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
-                              background: giftStyle === o.v ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)',
-                              border: `1px solid ${giftStyle === o.v ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`,
-                            }}>
-                            <div style={{ ...S, fontSize: 9, color: giftStyle === o.v ? 'var(--text)' : 'rgba(254,240,244,0.5)', letterSpacing: '0.04em' }}>{o.label}</div>
-                            <div style={{ ...S, fontSize: 7.5, color: 'rgba(254,240,244,0.3)', marginTop: 2 }}>{o.desc}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Colors */}
-                    <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-                      <div style={{ flex: 1 }}>
-                        <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Box color</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <input type="color" value={giftBoxColor} onChange={e => setGiftBoxColor(e.target.value)}
-                            style={{ width: 32, height: 32, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'none', padding: 0 }} />
-                          <input value={giftBoxColor} onChange={e => setGiftBoxColor(e.target.value)}
-                            placeholder="#c41428" maxLength={7}
-                            style={{ ...fieldStyle, flex: 1, fontFamily: 'monospace', fontSize: 10 }}
-                            onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
-                            onBlur={e => Object.assign(e.currentTarget.style, blurStyle)} />
-                        </div>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Ribbon color</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <input type="color" value={giftRibbonColor} onChange={e => setGiftRibbonColor(e.target.value)}
-                            style={{ width: 32, height: 32, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'none', padding: 0 }} />
-                          <input value={giftRibbonColor} onChange={e => setGiftRibbonColor(e.target.value)}
-                            placeholder="#fef0f4" maxLength={7}
-                            style={{ ...fieldStyle, flex: 1, fontFamily: 'monospace', fontSize: 10 }}
-                            onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
-                            onBlur={e => Object.assign(e.currentTarget.style, blurStyle)} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Pattern selector */}
-                    <div style={{ marginBottom: 10 }}>
-                      <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Pattern</label>
-                      <select
-                        value={giftPattern}
-                        onChange={e => { setGiftPattern(e.target.value as GiftPattern); setPatternFile(null); setGiftPatternImage(null) }}
-                        style={{ ...fieldStyle, cursor: 'pointer' }}
-                      >
-                        {GIFT_PATTERNS.map(p => (
-                          <option key={p.value} value={p.value}>{p.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Pattern color (not for custom/none) */}
-                    {giftPattern !== 'none' && giftPattern !== 'custom' && (
-                      <div style={{ marginBottom: 10 }}>
-                        <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Color del patrón</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <input type="color" value={giftPatternColor} onChange={e => setGiftPatternColor(e.target.value)}
-                            style={{ width: 32, height: 32, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'none', padding: 0 }} />
-                          <input value={giftPatternColor} onChange={e => setGiftPatternColor(e.target.value)}
-                            placeholder="#ffffff" maxLength={7}
-                            style={{ ...fieldStyle, flex: 1, fontFamily: 'monospace', fontSize: 10 }}
-                            onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
-                            onBlur={e => Object.assign(e.currentTarget.style, blurStyle)} />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Custom pattern image */}
-                    {giftPattern === 'custom' && (
-                      <div style={{ marginBottom: 10 }}>
-                        <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Imagen del estampado</label>
-                        <input ref={patternFileRef} type="file" accept="image/*" style={{ display: 'none' }}
-                          onChange={e => { const f = e.target.files?.[0]; if (f) pickPatternFile(f) }} />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <button type="button" onClick={() => patternFileRef.current?.click()}
-                            style={{ ...S, padding: '7px 14px', background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(196,20,40,0.3)', borderRadius: 7, color: 'rgba(254,240,244,0.5)', fontSize: 9, cursor: 'pointer', letterSpacing: '0.08em' }}>
-                            subir imagen
-                          </button>
-                          {giftPatternImage && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={giftPatternImage} alt="pattern preview" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(196,20,40,0.2)' }} />
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Gift box preview */}
-                    <GiftBoxPreview
-                      boxColor={giftBoxColor}
-                      ribbonColor={giftRibbonColor}
-                      pattern={giftPattern}
-                      patternColor={giftPatternColor}
-                      patternImage={giftPatternImage}
-                    />
-                  </>
-                )}
-              </div>
-
-              {/* ── Scratch card section ── */}
-              <div style={sectionStyle}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: scratchCard ? 14 : 0 }}>
-                  <div>
-                    <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)', marginBottom: 2 }}>
-                      🪄 scratch card
-                    </div>
-                    <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)' }}>
-                      Make the users reveal the price :0
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => setScratchCard(v => !v)} style={toggleStyle(scratchCard)} aria-label="Toggle scratch card">
-                    <span style={toggleKnob(scratchCard)} />
-                  </button>
-                </div>
-
-                {scratchCard && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {/* Scratch style */}
-                    <div>
-                      <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Card style</label>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        {([
-                          { v: 'lottery', label: '🎟️ Lottery ticket', desc: 'gold scratch-off' },
-                          { v: 'classic', label: '🪄 Classic', desc: 'dark overlay' },
-                        ] as const).map(o => (
-                          <button key={o.v} type="button" onClick={() => setScratchStyle(o.v)}
-                            style={{
-                              flex: 1, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
-                              background: scratchStyle === o.v ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)',
-                              border: `1px solid ${scratchStyle === o.v ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`,
-                            }}>
-                            <div style={{ ...S, fontSize: 9, color: scratchStyle === o.v ? 'var(--text)' : 'rgba(254,240,244,0.5)' }}>{o.label}</div>
-                            <div style={{ ...S, fontSize: 7.5, color: 'rgba(254,240,244,0.3)', marginTop: 2 }}>{o.desc}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Color de fondo</label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <input type="color" value={scratchCardColor} onChange={e => setScratchCardColor(e.target.value)}
-                          style={{ width: 32, height: 32, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'none', padding: 0 }} />
-                        <input value={scratchCardColor} onChange={e => setScratchCardColor(e.target.value)}
-                          placeholder="#2a1a2e" maxLength={7}
-                          style={{ ...fieldStyle, flex: 1, fontFamily: 'monospace', fontSize: 10 }}
-                          onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
-                          onBlur={e => Object.assign(e.currentTarget.style, blurStyle)} />
-                      </div>
-                    </div>
-                    <div>
-                      <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Texto personalizado</label>
+                    <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Código</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
                       <input
-                        value={scratchCardLabel}
-                        onChange={e => setScratchCardLabel(e.target.value)}
-                        placeholder="✦ scratch to reveal ✦"
-                        style={fieldStyle}
+                        value={code}
+                        onChange={e => setCode(e.target.value.toUpperCase())}
+                        placeholder="SUMMER24"
+                        style={{ ...fieldStyle, flex: 1, fontFamily: 'monospace' }}
                         onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
                         onBlur={e => Object.assign(e.currentTarget.style, blurStyle)}
                       />
-                    </div>
-                    {/* Difficulty selector */}
-                    <div>
-                      <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>🎮 Dificultad de rascado</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                        {SCRATCH_DIFFICULTIES.map(d => (
-                          <button key={d.value} type="button"
-                            onClick={() => setScratchDifficulty(d.value as ScratchDifficulty)}
-                            style={{
-                              ...S, padding: '7px 10px', borderRadius: 7, cursor: 'pointer', textAlign: 'left',
-                              background: scratchDifficulty === d.value ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)',
-                              border: `1px solid ${scratchDifficulty === d.value ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`,
-                              transition: 'all 0.15s',
-                            }}>
-                            <div style={{ fontSize: 9, color: scratchDifficulty === d.value ? 'var(--text)' : 'rgba(254,240,244,0.5)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 2 }}>{d.label}</div>
-                            <div style={{ fontSize: 7.5, color: 'rgba(254,240,244,0.25)' }}>{d.hint}</div>
-                          </button>
-                        ))}
-                      </div>
+                      <button type="button" onClick={genCode} style={{ ...S, padding: '0 12px', background: 'rgba(196,20,40,0.1)', border: '1px solid rgba(196,20,40,0.25)', borderRadius: 8, color: 'rgba(254,240,244,0.6)', fontSize: 10, cursor: 'pointer' }}>
+                        aleatorio
+                      </button>
                     </div>
                   </div>
-                )}
-              </div>
+                  <div>
+                    <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Nota admin (opcional)</label>
+                    <input value={label} onChange={e => setLabel(e.target.value)} placeholder="para el discord de junio" style={fieldStyle} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                  <button type="button" onClick={() => setStep(2)} disabled={!code.trim()} style={{ ...nextBtnStyle }}>continuar →</button>
+                </div>
+              </>
+            )}
 
-              {/* ── Multi-use section ── */}
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(196,20,40,0.1)', borderRadius: 10, padding: '14px 16px' }}>
-                <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)', marginBottom: 4 }}>🔢 Usage</div>
-                <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginBottom: 12 }}>Define how many times this code can be used</div>
-                <div style={{ display: 'flex', gap: 5, marginBottom: maxUsesMode === 'multi' ? 10 : 0 }}>
-                  {(['single', 'multi', 'unlimited'] as const).map(mode => (
-                    <button key={mode} type="button" onClick={() => setMaxUsesMode(mode)}
-                      style={{
-                        ...S, flex: 1, padding: '7px 4px', borderRadius: 7, cursor: 'pointer', fontSize: 8,
-                        letterSpacing: '0.06em', textTransform: 'uppercase',
-                        background: maxUsesMode === mode ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)',
-                        border: `1px solid ${maxUsesMode === mode ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`,
-                        color: maxUsesMode === mode ? 'var(--text)' : 'rgba(254,240,244,0.4)',
-                        transition: 'all 0.15s',
-                      }}>
-                      {mode === 'single' ? 'Once' : mode === 'multi' ? 'N Uses' : '∞ Unlimited'}
+            {step === 2 && (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                  {ALL_TYPES.map(t => (
+                    <button key={t} type="button" onClick={() => setRewardType(t)} style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '11px 13px', borderRadius: 9, cursor: 'pointer',
+                      border: `1px solid ${rewardType === t ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                      background: rewardType === t ? 'rgba(196,20,40,0.1)' : 'rgba(255,255,255,0.025)',
+                      textAlign: 'left',
+                    }}>
+                      <span style={{ fontSize: 18 }}>{t === 'link' ? '🔗' : t === 'text' ? '💬' : t === 'image' ? '🖼' : 'F'}</span>
+                      <div>
+                        <div style={{ ...S, fontSize: 11, color: 'var(--text)' }}>{t}</div>
+                        <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', marginTop: 2 }}>{CONTENT_META[t].placeholder}</div>
+                      </div>
                     </button>
                   ))}
                 </div>
-                {maxUsesMode === 'multi' && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <button type="button" onClick={() => setStep(1)} style={{ ...backBtnStyle }}>← atrás</button>
+                  <button type="button" onClick={() => setStep(3)} style={{ ...nextBtnStyle }}>continuar →</button>
+                </div>
+              </>
+            )}
+
+            {step === 3 && (
+              <>
+                {/* Reward title */}
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Título (mostrado al usuario)</label>
+                  <input value={rewardTitle} onChange={e => setRewardTitle(e.target.value)} placeholder="e.g. Enlace especial" style={fieldStyle} />
+                </div>
+
+                {/* Reward content según tipo */}
+                {rewardType === 'text' && (
                   <div>
-                    <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Number of uses</label>
-                    <input
-                      type="number" min="2" max="9999"
-                      value={maxUsesCount}
-                      onChange={e => setMaxUsesCount(e.target.value)}
-                      style={{ ...fieldStyle, fontFamily: 'monospace' }}
-                      onFocus={e => Object.assign(e.currentTarget.style, focusStyle)}
-                      onBlur={e => Object.assign(e.currentTarget.style, blurStyle)}
-                    />
+                    <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Mensaje</label>
+                    <textarea value={rewardContent} onChange={e => setRewardContent(e.target.value)} rows={3} placeholder={CONTENT_META.text.placeholder} style={{ ...fieldStyle, resize: 'vertical' }} />
                   </div>
                 )}
-                {maxUsesMode === 'unlimited' && (
-                  <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)', marginTop: 4 }}>
-                    This code is unilimited, it will never expire and will be avaliable forever ✦
+                {rewardType === 'link' && (
+                  <div>
+                    <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>URL</label>
+                    <input value={rewardContent} onChange={e => setRewardContent(e.target.value)} type="url" placeholder={CONTENT_META.link.placeholder} style={fieldStyle} />
                   </div>
                 )}
-              </div>
+                {rewardType === 'image' && (
+                  <div>
+                    <label style={{ ...S, fontSize: 9, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Imagen</label>
+                    <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) pickFile(f) }} />
+                    {imgPreview ? (
+                      <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(196,20,40,0.25)', marginBottom: 6 }}>
+                        <img src={imgPreview} alt="preview" style={{ width: '100%', maxHeight: 160, objectFit: 'cover' }} />
+                        <button type="button" onClick={() => { setImgFile(null); setImgPreview(null) }} style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(5,0,7,0.8)', border: 'none', borderRadius: 4, color: 'var(--text)', cursor: 'pointer', padding: '2px 6px' }}>✕</button>
+                      </div>
+                    ) : (
+                      <div onClick={() => fileRef.current?.click()} style={{ border: '2px dashed rgba(196,20,40,0.25)', borderRadius: 8, padding: '24px 16px', textAlign: 'center', cursor: 'pointer', fontSize: 10, color: 'rgba(254,240,244,0.35)' }}>click para subir · jpeg, png, gif, webp · max 10 MB</div>
+                    )}
+                    <div style={{ marginTop: 6 }}>
+                      <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.25)' }}>o URL directa:</label>
+                      <input value={rewardContent} onChange={e => { setRewardContent(e.target.value); if (e.target.value) { setImgFile(null); setImgPreview(null) } }} placeholder="https://i.imgur.com/…" style={{ ...fieldStyle, marginTop: 4 }} />
+                    </div>
+                  </div>
+                )}
+                {rewardType === 'fansly' && (
+                  <div>
+                    <label style={{ ...S, fontSize: 9, color: '#1da1f2', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Código Fansly</label>
+                    <input value={rewardContent} onChange={e => setRewardContent(e.target.value)} placeholder={CONTENT_META.fansly.placeholder} style={{ ...fieldStyle, fontFamily: 'monospace' }} />
+                  </div>
+                )}
 
-              {error && <div style={{ ...S, fontSize: 10, color: 'var(--primary)', textAlign: 'center' }}>{error}</div>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
+                  <button type="button" onClick={() => setStep(2)} style={{ ...backBtnStyle }}>← atrás</button>
+                  <button type="button" onClick={() => setStep(4)} disabled={!rewardContent.trim() && rewardType !== 'image'} style={{ ...nextBtnStyle }}>continuar →</button>
+                </div>
+              </>
+            )}
 
-              <button type="button" onClick={submit} disabled={saving || uploading}
-                style={{
-                  ...S, padding: '10px 0', marginTop: 4,
-                  background: saving || uploading ? 'rgba(196,20,40,0.08)' : 'rgba(196,20,40,0.2)',
-                  border: '1px solid rgba(196,20,40,0.4)', borderRadius: 8,
-                  color: saving || uploading ? 'var(--text-muted)' : 'var(--text)',
-                  fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
-                  cursor: saving || uploading ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
-                }}>
-                  {uploading ? 'uploading…' : saving ? 'creating…' : 'create code'}
-              </button>
-            </div>
+            {step === 4 && (
+              <>
+                {/* Gift animation */}
+                <div style={sectionStyle}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: giftAnimation ? 14 : 0 }}>
+                    <div>
+                      <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>🎁 Animación de regalo</div>
+                      <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)' }}>Mostrar una caja animada que el usuario debe abrir</div>
+                    </div>
+                    <button type="button" onClick={() => setGiftAnimation(v => !v)} style={toggleStyle(giftAnimation)}><span style={toggleKnob(giftAnimation)} /></button>
+                  </div>
+                  {giftAnimation && (
+                    <>
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.35)' }}>Estilo</label>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                          {(['modern', 'legacy'] as const).map(v => (
+                            <button key={v} type="button" onClick={() => setGiftStyle(v)} style={{ flex: 1, padding: '8px 10px', borderRadius: 8, background: giftStyle === v ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)', border: `1px solid ${giftStyle === v ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}` }}>
+                              {v === 'modern' ? 'Moderno' : 'Clásico'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ ...S, fontSize: 8 }}>Color caja</label>
+                          <input type="color" value={giftBoxColor} onChange={e => setGiftBoxColor(e.target.value)} style={{ width: '100%', marginTop: 4 }} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ ...S, fontSize: 8 }}>Color cinta</label>
+                          <input type="color" value={giftRibbonColor} onChange={e => setGiftRibbonColor(e.target.value)} style={{ width: '100%', marginTop: 4 }} />
+                        </div>
+                      </div>
+                      <select value={giftPattern} onChange={e => setGiftPattern(e.target.value as GiftPattern)} style={{ ...fieldStyle, marginBottom: 10 }}>
+                        {GIFT_PATTERNS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                      </select>
+                      {giftPattern !== 'none' && giftPattern !== 'custom' && (
+                        <div><label>Color patrón</label><input type="color" value={giftPatternColor} onChange={e => setGiftPatternColor(e.target.value)} style={{ width: '100%', marginTop: 4 }} /></div>
+                      )}
+                      {giftPattern === 'custom' && (
+                        <div>
+                          <label>Imagen patrón</label>
+                          <input ref={patternFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) pickPatternFile(f) }} />
+                          <button type="button" onClick={() => patternFileRef.current?.click()} style={{ ...S, marginTop: 4, padding: '6px 12px', background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(196,20,40,0.3)', borderRadius: 6, cursor: 'pointer' }}>Subir imagen</button>
+                          {giftPatternImage && <img src={giftPatternImage} alt="pattern preview" style={{ width: 40, height: 40, marginTop: 8, borderRadius: 6 }} />}
+                        </div>
+                      )}
+                      <GiftBoxPreview boxColor={giftBoxColor} ribbonColor={giftRibbonColor} pattern={giftPattern} patternColor={giftPatternColor} patternImage={giftPatternImage} />
+                    </>
+                  )}
+                </div>
+
+                {/* Scratch card */}
+                <div style={sectionStyle}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: scratchCard ? 14 : 0 }}>
+                    <div>
+                      <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>🪄 Tarjeta rasca</div>
+                      <div style={{ ...S, fontSize: 8, color: 'rgba(254,240,244,0.2)' }}>El usuario debe raspar para ver la recompensa</div>
+                    </div>
+                    <button type="button" onClick={() => setScratchCard(v => !v)} style={toggleStyle(scratchCard)}><span style={toggleKnob(scratchCard)} /></button>
+                  </div>
+                  {scratchCard && (
+                    <>
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={{ ...S, fontSize: 8 }}>Estilo</label>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                          {(['lottery', 'classic'] as const).map(v => (
+                            <button key={v} type="button" onClick={() => setScratchStyle(v)} style={{ flex: 1, padding: '8px 10px', borderRadius: 8, background: scratchStyle === v ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)', border: `1px solid ${scratchStyle === v ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}` }}>
+                              {v === 'lottery' ? 'Lotería' : 'Clásico'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ ...S, fontSize: 8 }}>Color fondo</label>
+                        <input type="color" value={scratchCardColor} onChange={e => setScratchCardColor(e.target.value)} style={{ width: '100%', marginTop: 4 }} />
+                      </div>
+                      <div>
+                        <label style={{ ...S, fontSize: 8 }}>Texto personalizado (opcional)</label>
+                        <input value={scratchCardLabel} onChange={e => setScratchCardLabel(e.target.value)} placeholder="✦ rasca para revelar ✦" style={fieldStyle} />
+                      </div>
+                      <div>
+                        <label style={{ ...S, fontSize: 8 }}>Dificultad</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginTop: 4 }}>
+                          {SCRATCH_DIFFICULTIES.map(d => (
+                            <button key={d.value} type="button" onClick={() => setScratchDifficulty(d.value as ScratchDifficulty)} style={{ padding: '6px', borderRadius: 6, background: scratchDifficulty === d.value ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)', border: `1px solid ${scratchDifficulty === d.value ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}` }}>{d.label}</button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Multi-use */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(196,20,40,0.1)', borderRadius: 10, padding: '14px 16px' }}>
+                  <div style={{ ...S, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>🔢 Uso</div>
+                  <div style={{ display: 'flex', gap: 5, marginBottom: maxUsesMode === 'multi' ? 10 : 0, marginTop: 8 }}>
+                    {(['single', 'multi', 'unlimited'] as const).map(mode => (
+                      <button key={mode} type="button" onClick={() => setMaxUsesMode(mode)} style={{ flex: 1, padding: '7px 4px', borderRadius: 7, background: maxUsesMode === mode ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)', border: `1px solid ${maxUsesMode === mode ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`, fontSize: 8 }}>
+                        {mode === 'single' ? 'Una vez' : mode === 'multi' ? 'N usos' : 'Ilimitado'}
+                      </button>
+                    ))}
+                  </div>
+                  {maxUsesMode === 'multi' && (
+                    <div><input type="number" min="2" max="9999" value={maxUsesCount} onChange={e => setMaxUsesCount(e.target.value)} style={fieldStyle} /></div>
+                  )}
+                </div>
+
+                {error && <div style={{ ...S, fontSize: 10, color: 'var(--primary)', textAlign: 'center' }}>{error}</div>}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
+                  <button type="button" onClick={() => setStep(3)} style={{ ...backBtnStyle }}>← atrás</button>
+                  <button type="button" onClick={submit} disabled={saving || uploading} style={{ ...primaryBtn(saving || uploading) }}>
+                    {uploading ? 'subiendo…' : saving ? 'creando…' : 'crear código'}
+                  </button>
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
