@@ -9,7 +9,14 @@ export async function GET(req: NextRequest) {
   const session = await getSession(req)
   // Solo root o quien tenga permiso 'settings' puede ver los logs
   if (!session || session.setup) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const canView = session.r === 'root' || session.p === 'all' || (Array.isArray(session.p) && session.p.includes('settings'))
+  const canView =
+    session.r === 'root' ||
+    session.p === 'all' ||
+    (Array.isArray(session.p) && (
+      session.p.includes('settings') ||
+      session.p.includes('admin') ||
+      session.p.includes('owner')
+    ))
   if (!canView) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const url = new URL(req.url)

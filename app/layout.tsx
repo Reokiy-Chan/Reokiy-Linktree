@@ -1,10 +1,13 @@
 import type { Metadata } from 'next'
+import dynamic from 'next/dynamic'
 import './globals.css'
 import { ThemeProvider } from './components/ThemeProvider'
 import TypewriterTitle from './components/TypewriterTitle'
-import MusicPlayer from './components/MusicPlayer'
 import TrackingBeacon from './components/TrackingBeacon'
 import CaptchaGate from './components/CaptchaGate'
+import PageTransition from './components/PageTransition'
+
+const MusicPlayer = dynamic(() => import('./components/MusicPlayer'), { ssr: false })
 
 export const metadata: Metadata = {
   title: {
@@ -57,7 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <TypewriterTitle />
           <TrackingBeacon />
           <CaptchaGate />
-          {children}
+          <PageTransition>{children}</PageTransition>
           <MusicPlayer />
         </ThemeProvider>
       </body>

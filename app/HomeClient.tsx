@@ -1,10 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import ParticlesBg from './components/ParticlesBg'
+import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import DiscordStatus from './components/DiscordStatus'
-import AboutMeModal from './components/AboutMeModal'
 import { useDiscord } from './hooks/useDiscord'
+
+const ParticlesBg = dynamic(() => import('./components/ParticlesBg'), { ssr: false })
+const AboutMeModal = dynamic(() => import('./components/AboutMeModal'), { ssr: false })
 
 /* ─── Icons ──────────────────────────────────────────────── */
 const Icons = {
@@ -196,19 +199,20 @@ export default function Home() {
           <button type="button"
             onClick={() => setAboutOpen(true)}
             className="aboutme-pill"
-            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', marginTop: 12 }}
           >
             <span>✦</span> about me <span>✦</span>
           </button>
 
           {/* Sorteos — link card */}
-          <a
+          <Link
             href="/raffles"
             onMouseEnter={() => setRaffleHovered(true)}
             onMouseLeave={() => setRaffleHovered(false)}
             style={{
               display: 'flex', alignItems: 'center', gap: 14,
               padding: '13px 16px', width: '100%',
+              marginTop: 24,
               background: raffleHovered ? 'rgba(196,20,40,0.1)' : 'var(--glass)',
               backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
               border: `1px solid ${raffleHovered ? 'rgba(196,20,40,0.45)' : 'rgba(196,20,40,0.22)'}`,
@@ -242,13 +246,14 @@ export default function Home() {
               </div>
             </div>
             <div style={{ color: raffleHovered ? 'rgba(196,20,40,0.9)' : 'rgba(245,232,255,0.2)', transition: 'background 0.25s ease, color 0.25s ease, border-color 0.25s ease, opacity 0.25s ease, transform 0.25s ease', transform: raffleHovered ? 'translateX(2px)' : 'none', fontSize: 14 }}>→</div>
-          </a>
+          </Link>
           {/* ─── REDEEM CARD ───────────────────────────────── */}
-          <a
+          <Link
             href="/redeem"
             style={{
               display: 'flex', alignItems: 'center', gap: 14,
               padding: '13px 16px', width: '100%',
+              marginTop: 10,
               background: 'var(--glass)',
               backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
               border: '1px solid rgba(168,85,247,0.25)',
@@ -289,7 +294,7 @@ export default function Home() {
               </div>
             </div>
             <div style={{ color: 'rgba(245,232,255,0.2)', fontSize: 14 }}>→</div>
-          </a>
+          </Link>
 
           <div className="footer-text">reokiy • your lewd dumb elf 🖤</div>
         </div>
