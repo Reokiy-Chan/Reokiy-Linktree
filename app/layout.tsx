@@ -1,13 +1,11 @@
 import type { Metadata } from 'next'
-import dynamic from 'next/dynamic'
 import './globals.css'
 import { ThemeProvider } from './components/ThemeProvider'
 import TypewriterTitle from './components/TypewriterTitle'
 import TrackingBeacon from './components/TrackingBeacon'
 import CaptchaGate from './components/CaptchaGate'
 import PageTransition from './components/PageTransition'
-
-const MusicPlayer = dynamic(() => import('./components/MusicPlayer'), { ssr: false })
+import MusicPlayer from './components/MusicPlayerLazy'
 
 export const metadata: Metadata = {
   title: {
