@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import type { SiteSettings } from '@/app/lib/settings'
+import type { EnvVar } from '@/app/api/admin/env-check/route'
 
 const S: React.CSSProperties = { fontFamily: 'var(--font-body)' }
 
@@ -45,9 +46,91 @@ const ROWS: RowDef[] = [
   { key: 'trackingEnabled', icon: '📡', title: 'Visit tracking', desc: 'Collect analytics from visitors. Turning this off pauses the live map too.', color: '#4ade80' },
 ]
 
+const SEV_STYLE = {
+  critical: { bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.25)', dot: '#f87171', badge: 'rgba(248,113,113,0.15)', badgeBorder: 'rgba(248,113,113,0.3)', badgeColor: '#f87171' },
+  warning:  { bg: 'rgba(251,191,36,0.06)',  border: 'rgba(251,191,36,0.22)',  dot: '#fbbf24', badge: 'rgba(251,191,36,0.12)',  badgeBorder: 'rgba(251,191,36,0.28)',  badgeColor: '#fbbf24' },
+  info:     { bg: 'rgba(148,163,184,0.05)', border: 'rgba(148,163,184,0.15)', dot: '#94a3b8', badge: 'rgba(148,163,184,0.08)', badgeBorder: 'rgba(148,163,184,0.2)',  badgeColor: '#94a3b8' },
+}
+
+function EnvWarnings({ vars }: { vars: EnvVar[] }) {
+  const missing = vars.filter(v => !v.set)
+  const [open, setOpen] = useState(true)
+
+  if (missing.length === 0) return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20,
+      background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.2)',
+      borderRadius: 10, padding: '10px 16px',
+    }}>
+      <span style={{ fontSize: 14 }}>✓</span>
+      <span style={{ ...S, fontSize: 12, color: '#4ade80', letterSpacing: '0.04em' }}>All environment variables are configured.</span>
+    </div>
+  )
+
+  const hasCritical = missing.some(v => v.severity === 'critical')
+  const topSev = hasCritical ? 'critical' : missing.some(v => v.severity === 'warning') ? 'warning' : 'info'
+  const sty = SEV_STYLE[topSev]
+
+  return (
+    <div style={{
+      marginBottom: 20, background: sty.bg,
+      border: `1px solid ${sty.border}`, borderRadius: 10,
+      overflow: 'hidden', animation: 'fadeInUp 0.3s ease',
+    }}>
+      {/* Header */}
+      <button type="button" onClick={() => setOpen(o => !o)} style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 10, padding: '10px 16px', background: 'none', border: 'none', cursor: 'pointer',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 14 }}>⚠</span>
+          <span style={{ ...S, fontSize: 12, color: sty.dot, letterSpacing: '0.04em', fontWeight: 500 }}>
+            {missing.length} missing environment variable{missing.length !== 1 ? 's' : ''}
+          </span>
+          {missing.filter(v => v.severity === 'critical').length > 0 && (
+            <span style={{ ...S, fontSize: 10, padding: '1px 7px', borderRadius: 20, background: SEV_STYLE.critical.badge, border: `1px solid ${SEV_STYLE.critical.badgeBorder}`, color: SEV_STYLE.critical.badgeColor, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              {missing.filter(v => v.severity === 'critical').length} critical
+            </span>
+          )}
+        </div>
+        <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)' }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {/* List */}
+      {open && (
+        <div style={{ borderTop: `1px solid ${sty.border}`, display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {missing.map((v, i) => {
+            const st = SEV_STYLE[v.severity]
+            return (
+              <div key={v.key} style={{
+                display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 16px',
+                borderBottom: i < missing.length - 1 ? `1px solid rgba(255,255,255,0.04)` : 'none',
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.dot, flexShrink: 0, marginTop: 5 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 3 }}>
+                    <code style={{ ...S, fontSize: 11, color: 'var(--text)', background: 'rgba(255,255,255,0.07)', padding: '1px 6px', borderRadius: 4 }}>
+                      {v.key}
+                    </code>
+                    <span style={{ ...S, fontSize: 10, padding: '1px 7px', borderRadius: 20, background: st.badge, border: `1px solid ${st.badgeBorder}`, color: st.badgeColor, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                      {v.severity}
+                    </span>
+                  </div>
+                  <div style={{ ...S, fontSize: 11, color: 'rgba(254,240,244,0.45)', lineHeight: 1.5 }}>{v.effect}</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const router = useRouter()
   const [settings, setSettings] = useState<SiteSettings | null>(null)
+  const [envVars, setEnvVars] = useState<EnvVar[]>([])
   const [saving, setSaving] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [msgSaved, setMsgSaved] = useState(false)
@@ -58,6 +141,10 @@ export default function SettingsPage() {
     fetch('/api/admin/settings')
       .then(r => { if (r.status === 401) { router.replace('/admin/login'); return null } return r.json() })
       .then(d => { if (d?.settings) { setSettings(d.settings); setMessage(d.settings.maintenanceMessage ?? '') } })
+      .catch(() => {})
+    fetch('/api/admin/env-check')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.vars) setEnvVars(d.vars) })
       .catch(() => {})
   }, [router])
 
@@ -90,7 +177,6 @@ export default function SettingsPage() {
   }
 
   const anyDangerOn = settings.maintenanceMode || settings.attackMode
-  const hasTurnstile = !!(process.env.NEXT_PUBLIC_CF_TURNSTILE_SITE_KEY)
 
   return (
     <div style={{ maxWidth: 620, margin: '0 auto' }}>
@@ -106,6 +192,9 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* Env var health check */}
+      {envVars.length > 0 && <EnvWarnings vars={envVars} />}
+
       {anyDangerOn && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16,
@@ -118,20 +207,6 @@ export default function SettingsPage() {
               : settings.maintenanceMode ? 'Maintenance mode is active — visitors see the maintenance page.'
               : 'Attack mode is active — public endpoints are rate-limited and CAPTCHA-gated.'}
           </span>
-        </div>
-      )}
-
-      {/* Attack mode + Turnstile notice */}
-      {!hasTurnstile && (
-        <div style={{
-          ...S, fontSize: 12, marginBottom: 12, padding: '9px 14px',
-          background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.15)',
-          borderRadius: 8, color: 'rgba(251,191,36,0.6)', lineHeight: 1.5,
-        }}>
-          ⚡ <strong>Cloudflare Turnstile not configured.</strong> Set{' '}
-          <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 3 }}>NEXT_PUBLIC_CF_TURNSTILE_SITE_KEY</code> and{' '}
-          <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 3 }}>CF_TURNSTILE_SECRET_KEY</code>{' '}
-          in Vercel env vars to enable CAPTCHA in attack mode.
         </div>
       )}
 

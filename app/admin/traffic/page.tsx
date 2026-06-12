@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
 } from 'recharts'
 import type { Stats } from '@/app/lib/data'
+import DonutChart from '@/app/admin/components/DonutChart'
 
 const TT = { background: 'rgba(5,0,7,0.97)', border: '1px solid rgba(196,20,40,0.35)', borderRadius: 8, fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#fee0f4', padding: '6px 10px' }
 const S: React.CSSProperties = { fontFamily: 'var(--font-body)' }
@@ -193,14 +193,25 @@ export default function TrafficPage() {
       {/* Referrers */}
       <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 14 }} className="ref-grid">
         <Sec title="traffic sources" style={{ marginBottom: 0 }}>
-          <ResponsiveContainer width="100%" height={160}>
-            <PieChart>
-              <Pie data={refData} dataKey="value" innerRadius={45} outerRadius={70} paddingAngle={2}>
-                {refData.map((r, i) => <Cell key={i} fill={r.color} />)}
-              </Pie>
-              <Tooltip contentStyle={TT} formatter={(v) => [v, 'visits']} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <DonutChart
+              size={100}
+              thickness={12}
+              slices={refData.map(r => ({ label: r.name, value: r.value, color: r.color }))}
+              centerLabel={{ value: stats.total, sub: 'VISITS' }}
+            />
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {refData.slice(0, 4).map((r) => (
+                <div key={r.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: r.color, flexShrink: 0 }} />
+                    <span style={{ ...S, fontSize: 11, color: 'rgba(254,240,244,0.55)', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+                  </div>
+                  <span style={{ ...S, fontSize: 11, color: 'var(--text)' }}>{stats.total > 0 ? Math.round((r.value / stats.total) * 100) : 0}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </Sec>
         <Sec title="referrers — detail" style={{ marginBottom: 0 }}>
           <div style={{ overflowX: 'auto' }}>

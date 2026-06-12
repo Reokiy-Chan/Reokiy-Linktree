@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import type { Stats, SessionSummary } from '@/app/lib/data'
+import DonutChart from '@/app/admin/components/DonutChart'
 
 const TT = { background: 'rgba(5,0,7,0.97)', border: '1px solid rgba(196,20,40,0.35)', borderRadius: 8, fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#fee0f4', padding: '6px 10px' }
 const S: React.CSSProperties = { fontFamily: 'var(--font-body)' }
+const PIE_COLORS = ['#c41428', '#e8195c', '#ff5fa0', '#ff8030', '#a0004a']
 
 function Sec({ title, children, style }: { title: string; children: React.ReactNode; style?: React.CSSProperties }) {
   return (
@@ -51,27 +53,29 @@ function BounceGauge({ rate }: { rate: number }) {
   )
 }
 
-// Mini donut
-function MiniDonut({ data, title }: { data: { name: string; value: number }[]; title: string }) {
-  const COLORS = ['#c41428', '#e8195c', '#ff5fa0', '#ff8030', '#a0004a']
+function StatDonut({ data }: { data: { name: string; value: number }[] }) {
   const total = data.reduce((s, d) => s + d.value, 0)
+  const top = data[0]
+  const slices = data.map((d, i) => ({ label: d.name, value: d.value, color: PIE_COLORS[i % PIE_COLORS.length] }))
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <div style={{ ...S, fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(196,20,40,0.65)', marginBottom: 8 }}>{title}</div>
-      <PieChart width={120} height={100}>
-        <Pie data={data} dataKey="value" innerRadius={32} outerRadius={48} paddingAngle={2} startAngle={90} endAngle={-270}>
-          {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-        </Pie>
-        <Tooltip contentStyle={TT} formatter={(v) => [`${Number(v)} (${Math.round(Number(v) / Math.max(total, 1) * 100)}%)`, '']} />
-      </PieChart>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+      <DonutChart
+        size={100}
+        thickness={12}
+        slices={slices}
+        centerLabel={top ? {
+          value: `${total > 0 ? Math.round((top.value / total) * 100) : 0}%`,
+          sub: top.name.toUpperCase(),
+        } : undefined}
+      />
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 5 }}>
         {data.slice(0, 4).map((d, i) => (
           <div key={d.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <div style={{ width: 6, height: 6, borderRadius: 1, background: COLORS[i % COLORS.length], flexShrink: 0 }} />
-              <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.45)' }}>{d.name}</span>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: PIE_COLORS[i % PIE_COLORS.length], flexShrink: 0 }} />
+              <span style={{ ...S, fontSize: 11, color: 'rgba(254,240,244,0.55)' }}>{d.name}</span>
             </div>
-            <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)' }}>{Math.round(d.value / Math.max(total, 1) * 100)}%</span>
+            <span style={{ ...S, fontSize: 11, color: 'var(--text)' }}>{total > 0 ? Math.round((d.value / total) * 100) : 0}%</span>
           </div>
         ))}
       </div>
@@ -134,13 +138,13 @@ export default function SessionsPage() {
       {/* 3 donuts + gauge */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 160px', gap: 14, marginBottom: 14 }} className="sess-top-grid">
         <Sec title="devices" style={{ marginBottom: 0 }}>
-          {devData.length ? <MiniDonut data={devData} title="" /> : <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)' }}>no data</span>}
+          {devData.length ? <StatDonut data={devData} /> : <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)' }}>no data</span>}
         </Sec>
         <Sec title="browsers" style={{ marginBottom: 0 }}>
-          {brwData.length ? <MiniDonut data={brwData} title="" /> : <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)' }}>no data</span>}
+          {brwData.length ? <StatDonut data={brwData} /> : <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)' }}>no data</span>}
         </Sec>
         <Sec title="operating systems" style={{ marginBottom: 0 }}>
-          {osData.length ? <MiniDonut data={osData} title="" /> : <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)' }}>no data</span>}
+          {osData.length ? <StatDonut data={osData} /> : <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)' }}>no data</span>}
         </Sec>
         <Sec title="bounce rate" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <BounceGauge rate={stats.bounceRate} />
