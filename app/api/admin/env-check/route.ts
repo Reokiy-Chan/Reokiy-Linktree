@@ -11,6 +11,7 @@ export interface EnvVar {
   label: string
   effect: string
   group?: string
+  aliases?: string[]
 }
 
 const CHECKS: Omit<EnvVar, 'set'>[] = [
@@ -21,6 +22,7 @@ const CHECKS: Omit<EnvVar, 'set'>[] = [
     label: 'Upstash Redis URL',
     effect: 'All data (audit log, settings, visits) is lost on every Vercel cold start.',
     group: 'redis',
+    aliases: ['KV_REST_API_URL'],
   },
   {
     key: 'UPSTASH_REDIS_REST_TOKEN',
@@ -28,6 +30,7 @@ const CHECKS: Omit<EnvVar, 'set'>[] = [
     label: 'Upstash Redis token',
     effect: 'All data (audit log, settings, visits) is lost on every Vercel cold start.',
     group: 'redis',
+    aliases: ['KV_REST_API_TOKEN'],
   },
   // ── Security ──────────────────────────────────────────────────
   {
@@ -82,7 +85,7 @@ export async function GET(req: NextRequest) {
 
   const vars: EnvVar[] = CHECKS.map(c => ({
     ...c,
-    set: !!(process.env[c.key]),
+    set: !!(process.env[c.key] || c.aliases?.some(a => process.env[a])),
   }))
 
   return NextResponse.json({ vars })

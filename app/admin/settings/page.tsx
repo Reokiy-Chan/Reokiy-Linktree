@@ -56,16 +56,7 @@ function EnvWarnings({ vars }: { vars: EnvVar[] }) {
   const missing = vars.filter(v => !v.set)
   const [open, setOpen] = useState(true)
 
-  if (missing.length === 0) return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20,
-      background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.2)',
-      borderRadius: 10, padding: '10px 16px',
-    }}>
-      <span style={{ fontSize: 14 }}>✓</span>
-      <span style={{ ...S, fontSize: 12, color: '#4ade80', letterSpacing: '0.04em' }}>All environment variables are configured.</span>
-    </div>
-  )
+  if (missing.length === 0) return null
 
   const hasCritical = missing.some(v => v.severity === 'critical')
   const topSev = hasCritical ? 'critical' : missing.some(v => v.severity === 'warning') ? 'warning' : 'info'

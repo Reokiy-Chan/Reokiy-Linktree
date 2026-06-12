@@ -1,11 +1,11 @@
 import type { Redis as RedisType } from '@upstash/redis'
 
-export const USE_KV = !!(
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-)
+// Accept both Upstash-native names and the names Vercel KV integration injects.
+const REST_URL   = process.env.UPSTASH_REDIS_REST_URL   ?? process.env.KV_REST_API_URL
+const REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN
 
-// Warn at startup if running on Vercel without KV configured.
-// /tmp is wiped on every cold start → all data is lost.
+export const USE_KV = !!(REST_URL && REST_TOKEN)
+
 if (process.env.VERCEL && !USE_KV) {
   console.error(
     '\n[reokiy] ⚠️  DATA IN DANGER: running on Vercel without Upstash Redis.' +
@@ -14,13 +14,12 @@ if (process.env.VERCEL && !USE_KV) {
   )
 }
 
-// Module-level singleton — reused across warm invocations in the same container.
 let _redis: RedisType | null = null
 
 export async function getRedis(): Promise<RedisType> {
   if (!_redis) {
     const { Redis } = await import('@upstash/redis')
-    _redis = Redis.fromEnv()
+    _redis = new Redis({ url: REST_URL!, token: REST_TOKEN! })
   }
   return _redis
 }
