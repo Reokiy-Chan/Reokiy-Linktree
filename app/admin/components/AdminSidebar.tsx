@@ -220,6 +220,17 @@ export default function AdminSidebar({ alertBanner = false }: { alertBanner?: bo
       )}
 
       {/* Current user - ahora enlace a /admin/account */}
+      {!me && (
+        <Link href="/admin/login" style={{ textDecoration: 'none' }}>
+          <div style={{ padding: '10px 14px', borderTop: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(196,20,40,0.7)', border: '1.5px solid rgba(248,113,113,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16, color: '#fff', fontWeight: 700 }}>!</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: '#f87171', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>session error</div>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(248,113,113,0.5)' }}>click to log in</div>
+            </div>
+          </div>
+        </Link>
+      )}
       {me && (
         <div style={{ position: 'relative' }}>
           {profileOpen && (
@@ -353,7 +364,6 @@ export default function AdminSidebar({ alertBanner = false }: { alertBanner?: bo
           top: alertBanner ? 32 : 0,
           left: 0,
           bottom: 0,
-          overflowY: 'auto',
           zIndex: 10,
         }} className="admin-sidebar-desktop">
         {sidebarContent}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSessionToken } from '@/app/lib/auth'
+import { createSessionToken, SESSION_COOKIE_NAME } from '@/app/lib/auth'
 import { getUser, ensureRoot, updateUser } from '@/app/lib/users'
 import { verifyAuthenticationResponse } from '@simplewebauthn/server'
 import type { AuthenticatorTransportFuture } from '@simplewebauthn/server'
@@ -7,7 +7,7 @@ import { consumeChallenge, getRpConfig } from '@/app/lib/webauthn'
 
 export const runtime = 'nodejs'
 
-const COOKIE_NAME = 'admin_session'
+const COOKIE_NAME = SESSION_COOKIE_NAME
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 
 export async function POST(req: NextRequest) {

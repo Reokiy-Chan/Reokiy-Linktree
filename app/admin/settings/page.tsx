@@ -127,16 +127,27 @@ export default function SettingsPage() {
   const [msgSaved, setMsgSaved] = useState(false)
   const [toast, setToast] = useState('')
   const [toastErr, setToastErr] = useState(false)
+  const [envChecking, setEnvChecking] = useState(false)
+  const [envLastCheck, setEnvLastCheck] = useState<'ok' | 'warn' | null>(null)
+
+  const checkEnvVars = async () => {
+    setEnvChecking(true)
+    try {
+      const d = await fetch('/api/admin/env-check').then(r => r.ok ? r.json() : null)
+      if (d?.vars) {
+        setEnvVars(d.vars)
+        setEnvLastCheck(d.vars.some((v: { set: boolean }) => !v.set) ? 'warn' : 'ok')
+      }
+    } catch {}
+    setEnvChecking(false)
+  }
 
   useEffect(() => {
     fetch('/api/admin/settings')
       .then(r => { if (r.status === 401) { router.replace('/admin/login'); return null } return r.json() })
       .then(d => { if (d?.settings) { setSettings(d.settings); setMessage(d.settings.maintenanceMessage ?? '') } })
       .catch(() => {})
-    fetch('/api/admin/env-check')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.vars) setEnvVars(d.vars) })
-      .catch(() => {})
+    checkEnvVars()
   }, [router])
 
   const showToast = (msg: string, err = false) => {
@@ -184,7 +195,15 @@ export default function SettingsPage() {
       </div>
 
       {/* Env var health check */}
-      {envVars.length > 0 && <EnvWarnings vars={envVars} />}
+      <div style={{ marginBottom: 20 }}>
+        {envVars.length > 0 && <EnvWarnings vars={envVars} />}
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button type="button" onClick={checkEnvVars} disabled={envChecking}
+            style={{ ...S, padding: '5px 12px', fontSize: 12, background: 'rgba(255,255,255,0.03)', border: `1px solid ${envLastCheck === 'ok' ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 7, color: envLastCheck === 'ok' ? '#4ade80' : 'rgba(254,240,244,0.35)', cursor: envChecking ? 'wait' : 'pointer', letterSpacing: '0.06em', opacity: envChecking ? 0.6 : 1, transition: 'color 0.2s, border-color 0.2s' }}>
+            {envChecking ? 'checking…' : envLastCheck === 'ok' ? '✓ all vars set' : '↻ check env vars'}
+          </button>
+        </div>
+      </div>
 
       {anyDangerOn && (
         <div style={{

@@ -18,10 +18,12 @@ export async function POST(request: NextRequest) {
       if (!attackRateLimit(ip)) {
         return NextResponse.json({ ok: false }, { status: 429 })
       }
-      // Captcha cookie check — bots won't have cf_verified
-      const cfVerified = request.cookies.get('cf_verified')?.value
-      if (!cfVerified) {
-        return NextResponse.json({ ok: false, captchaRequired: true }, { status: 403 })
+      // Captcha cookie check — only enforce when keys are actually configured
+      if (process.env.CF_TURNSTILE_SECRET_KEY) {
+        const cfVerified = request.cookies.get('cf_verified')?.value
+        if (!cfVerified) {
+          return NextResponse.json({ ok: false, captchaRequired: true }, { status: 403 })
+        }
       }
     }
 

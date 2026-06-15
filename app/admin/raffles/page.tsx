@@ -271,7 +271,7 @@ function RaffleModal({
   const [title, setTitle]           = useState(initial?.title ?? '')
   const [desc, setDesc]             = useState(initial?.description ?? '')
   const [endsAt, setEndsAt]         = useState(initial?.endsAt ? initial.endsAt.slice(0, 16) : '')
-  const [autoEnd, setAutoEnd]       = useState(initial?.autoEnd ?? false)
+  const isEnded = initial?.status === 'ended'
   const [prizes, setPrizes]         = useState<RafflePrize[]>(initial?.prizes ?? [])
   const [prizeInput, setPrizeInput] = useState('')
   const [prizeDesc, setPrizeDesc]   = useState('')
@@ -303,7 +303,6 @@ function RaffleModal({
         description: desc.trim(),
         prizes,
         endsAt: endsAt ? new Date(endsAt).toISOString() : undefined,
-        autoEnd,
         maxWinners: Math.max(1, parseInt(maxWinners) || 1),
         onePerIp,
       }
@@ -348,35 +347,52 @@ function RaffleModal({
           {/* Prizes */}
           <div>
             <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Prizes</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 8 }}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input value={prizeInput} onChange={e => setPrizeInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPrize() } }}
-                  placeholder="Reward name…"
-                  style={{ ...fieldStyle, flex: 1 }} />
-                <button type="button" onClick={addPrize}
-                  style={{ ...S, padding: '0 12px', background: 'rgba(196,20,40,0.1)', border: '1px solid rgba(196,20,40,0.25)', borderRadius: 8, color: 'rgba(254,240,244,0.6)', fontSize: 12, cursor: 'pointer' }}>
-                  +
-                </button>
+            {isEnded ? (
+              <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.25)', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 12px' }}>
+                Prizes cannot be edited after a giveaway has ended.
+                {prizes.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
+                    {prizes.map((p, i) => (
+                      <span key={p.id} style={{ ...S, fontSize: 12, padding: '3px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(254,240,244,0.45)' }}>
+                        #{i+1} {p.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-              <input value={prizeDesc} onChange={e => setPrizeDesc(e.target.value)}
-                placeholder="Reward description (optional)…"
-                style={{ ...fieldStyle, fontSize: 12 }} />
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {prizes.map((p, i) => (
-                <span key={p.id} style={{
-                  ...S, fontSize: 12, padding: '3px 10px 3px 12px', borderRadius: 20,
-                  background: 'rgba(196,20,40,0.12)', border: '1px solid rgba(196,20,40,0.25)',
-                  color: 'rgba(254,240,244,0.7)', display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                  <span style={{ color: 'rgba(254,240,244,0.35)', fontSize: 12, marginRight: 2 }}>#{i + 1}</span>
-                  {p.label}
-                  <button type="button" onClick={() => setPrizes(prev => prev.filter(x => x.id !== p.id))}
-                    style={{ background: 'none', border: 'none', color: 'rgba(254,240,244,0.4)', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: 0 }}>✕</button>
-                </span>
-              ))}
-            </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input value={prizeInput} onChange={e => setPrizeInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPrize() } }}
+                      placeholder="Reward name…"
+                      style={{ ...fieldStyle, flex: 1 }} />
+                    <button type="button" onClick={addPrize}
+                      style={{ ...S, padding: '0 12px', background: 'rgba(196,20,40,0.1)', border: '1px solid rgba(196,20,40,0.25)', borderRadius: 8, color: 'rgba(254,240,244,0.6)', fontSize: 12, cursor: 'pointer' }}>
+                      +
+                    </button>
+                  </div>
+                  <input value={prizeDesc} onChange={e => setPrizeDesc(e.target.value)}
+                    placeholder="Reward description (optional)…"
+                    style={{ ...fieldStyle, fontSize: 12 }} />
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {prizes.map((p, i) => (
+                    <span key={p.id} style={{
+                      ...S, fontSize: 12, padding: '3px 10px 3px 12px', borderRadius: 20,
+                      background: 'rgba(196,20,40,0.12)', border: '1px solid rgba(196,20,40,0.25)',
+                      color: 'rgba(254,240,244,0.7)', display: 'flex', alignItems: 'center', gap: 6,
+                    }}>
+                      <span style={{ color: 'rgba(254,240,244,0.35)', fontSize: 12, marginRight: 2 }}>#{i + 1}</span>
+                      {p.label}
+                      <button type="button" onClick={() => setPrizes(prev => prev.filter(x => x.id !== p.id))}
+                        style={{ background: 'none', border: 'none', color: 'rgba(254,240,244,0.4)', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: 0 }}>✕</button>
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Max winners */}
@@ -392,18 +408,6 @@ function RaffleModal({
             <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>End date (optional)</label>
             <input type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)}
               style={{ ...fieldStyle, colorScheme: 'dark' }} />
-          </div>
-
-          {/* Auto-end toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(196,20,40,0.12)', borderRadius: 10, padding: '12px 14px' }}>
-            <div>
-              <div style={{ ...S, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(254,240,244,0.5)' }}>Auto-complete</div>
-              <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.2)', marginTop: 2 }}>Automatically pick the winner when the end date passes</div>
-            </div>
-            <button type="button" onClick={() => setAutoEnd(v => !v)}
-              style={{ width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', background: autoEnd ? 'rgba(196,20,40,0.7)' : 'rgba(255,255,255,0.1)', position: 'relative', transition: 'background 0.2s', flexShrink: 0, marginLeft: 12 }}>
-              <span style={{ position: 'absolute', top: 3, left: autoEnd ? 21 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
-            </button>
           </div>
 
           {/* One entry per IP toggle */}
@@ -447,6 +451,7 @@ function ParticipantsDrawer({
   onUpdated: (r: Raffle) => void
 }) {
   const [picking, setPicking]     = useState(false)
+  const [rerolling, setRerolling] = useState<string | null>(null)
   const [toast, setToast]         = useState('')
   const [toastOk, setToastOk]     = useState(true)
   const [addInput, setAddInput]   = useState('')
@@ -515,6 +520,26 @@ function ParticipantsDrawer({
       showToast(`⚠ ${data.error}`, false)
     }
     setPicking(false)
+  }
+
+  const reroll = async (username: string) => {
+    if (!confirm(`Reroll winner "${username}"? This will remove them and pick a new winner.`)) return
+    setRerolling(username)
+    // Remove this winner; if raffle was ended, reset to active so pick works
+    const currentWinners = (raffle.winners ?? []).filter(w => w.discordUsername !== username)
+    const patchRes = await fetch(`/api/admin/raffles/${raffle.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ winners: currentWinners, status: 'active' }),
+    })
+    if (!patchRes.ok) { showToast('⚠ Reroll failed', false); setRerolling(null); return }
+    const pickRes = await fetch(`/api/admin/raffles/${raffle.id}/pick`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+    const data = await pickRes.json()
+    if (pickRes.ok) {
+      setReveal({ winner: data.winner.discordUsername, prizeLabel: data.winner.prizeLabel ?? undefined, raffle: data.raffle })
+    } else {
+      showToast(`⚠ ${data.error}`, false)
+    }
+    setRerolling(null)
   }
 
   const addParticipant = async () => {
@@ -796,7 +821,7 @@ function ParticipantsDrawer({
                 borderRadius: 10, padding: '12px 14px',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ ...S, fontSize: 12, color: 'rgba(255,215,0,0.5)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
                       🏆 Winner #{i + 1}
                     </div>
@@ -805,8 +830,16 @@ function ParticipantsDrawer({
                       <div style={{ ...S, fontSize: 12, color: 'rgba(255,215,0,0.6)' }}>🎁 {w.prizeLabel}</div>
                     )}
                   </div>
-                  <div style={{ ...S, fontSize: 12, color: 'rgba(255,215,0,0.3)', textAlign: 'right' }}>
-                    {new Date(w.pickedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0, marginLeft: 8 }}>
+                    <div style={{ ...S, fontSize: 12, color: 'rgba(255,215,0,0.3)' }}>
+                      {new Date(w.pickedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <button type="button" onClick={() => reroll(w.discordUsername)} disabled={!!rerolling}
+                      style={{ ...S, padding: '4px 10px', fontSize: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6, color: 'rgba(254,240,244,0.4)', cursor: 'pointer' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; e.currentTarget.style.color = '#fbbf24' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'rgba(254,240,244,0.4)' }}>
+                      {rerolling === w.discordUsername ? '…' : '🔄 reroll'}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1306,6 +1339,22 @@ export default function RafflesPage() {
                     <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                       {Math.round(elapsed * 100)}% del tiempo
                     </span>
+                  </div>
+                )}
+
+                {/* Deadline passed notification */}
+                {!isDone && endsAt && endsAt < now && (
+                  <div style={{
+                    padding: '8px 16px', background: 'rgba(251,191,36,0.08)',
+                    borderTop: '1px solid rgba(251,191,36,0.25)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                  }}>
+                    <span style={{ fontSize: 12, color: '#fbbf24' }}>⏰ Deadline reached — pick your winners!</span>
+                    <button type="button"
+                      onClick={e => { e.stopPropagation(); setViewing(raffle) }}
+                      style={{ ...S, padding: '4px 10px', fontSize: 12, background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.4)', borderRadius: 6, color: '#fbbf24', cursor: 'pointer', flexShrink: 0 }}>
+                      Pick now
+                    </button>
                   </div>
                 )}
 

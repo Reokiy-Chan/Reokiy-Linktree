@@ -9,10 +9,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params
   const body = await req.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'Bad request' }, { status: 400 })
-  const code = await updateCode(id, {
-    ...(typeof body.rewardTitle === 'string' ? { rewardTitle: body.rewardTitle } : {}),
-    ...(typeof body.adminNote === 'string' ? { adminNote: body.adminNote } : {}),
-  })
+  // Allowlist of editable fields — never allow id/used/useCount/usedAt/createdAt
+  const EDITABLE = ['code','label','adminNote','rewardType','rewardContent','rewardTitle',
+    'giftAnimation','giftStyle','giftBoxColor','giftRibbonColor','giftPattern','giftPatternColor','giftPatternImage',
+    'scratchCard','scratchStyle','scratchCardColor','scratchCardLabel','scratchTextColor','scratchAccentColor',
+    'scratchCardWidth','scratchCardHeight','scratchRevealThreshold','scratchDifficulty','maxUses'] as const
+  const patch: Record<string, unknown> = {}
+  for (const key of EDITABLE) {
+    if (key in body) patch[key] = body[key]
+  }
+  const code = await updateCode(id, patch)
   if (!code) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json({ code })
 }

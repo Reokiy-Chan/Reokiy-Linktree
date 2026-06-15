@@ -173,7 +173,9 @@ export async function markUsed(id: string): Promise<boolean> {
   return true
 }
 
-export async function updateCode(id: string, patch: Partial<Pick<RedeemCode, 'rewardTitle' | 'adminNote' | 'label'>>): Promise<RedeemCode | null> {
+type EditableCodeFields = Partial<Omit<RedeemCode, 'id' | 'used' | 'useCount' | 'usedAt' | 'createdAt'>>
+
+export async function updateCode(id: string, patch: EditableCodeFields): Promise<RedeemCode | null> {
   if (USE_KV) {
     const kv = await getRedis()
     const raw = await kv.hget(KV_KEY, id)

@@ -83,16 +83,19 @@ function readSessionToken(token: string | undefined, secret: string): SessionPay
   }
 }
 
-/** Reads the current session payload from the admin_session cookie. */
+// Different cookie name per environment so dev and production sessions never collide
+export const SESSION_COOKIE_NAME = process.env.NODE_ENV === 'development' ? 'admin_session_dev' : 'admin_session'
+
+/** Reads the current session payload from the admin session cookie. */
 export async function getSession(req?: NextRequest): Promise<SessionPayload | null> {
   const secret = process.env.ADMIN_SECRET ?? 'reokiy_secret_change_me'
   let token: string | undefined
   if (req) {
     token = req.headers.get('cookie')?.split(';').map(c => c.trim())
-      .find(c => c.startsWith('admin_session='))?.slice('admin_session='.length)
+      .find(c => c.startsWith(`${SESSION_COOKIE_NAME}=`))?.slice(`${SESSION_COOKIE_NAME}=`.length)
   } else {
     const jar = await cookies()
-    token = jar.get('admin_session')?.value
+    token = jar.get(SESSION_COOKIE_NAME)?.value
   }
   return readSessionToken(token, secret)
 }
@@ -110,13 +113,12 @@ export async function validateSession(req?: NextRequest): Promise<boolean> {
     const token = cookieHeader
       .split(';')
       .map(c => c.trim())
-      .find(c => c.startsWith('admin_session='))
-      ?.slice('admin_session='.length)
-    // ✅ FIX: readSessionToken exige uid/u/r presentes
+      .find(c => c.startsWith(`${SESSION_COOKIE_NAME}=`))
+      ?.slice(`${SESSION_COOKIE_NAME}=`.length)
     return !!readSessionToken(token, secret)
   }
 
   const jar = await cookies()
-  const token = jar.get('admin_session')?.value
+  const token = jar.get(SESSION_COOKIE_NAME)?.value
   return !!readSessionToken(token, secret)
 }

@@ -107,6 +107,8 @@ export default function CaptchaGate() {
         if (!mounted.current) return
         if (d.attackMode) {
           setAttackMode(true)
+          // If CAPTCHA keys aren't configured, skip the gate entirely
+          if (!SITEKEY) { setVerified(true); return }
           setVerified(false)
         }
       })

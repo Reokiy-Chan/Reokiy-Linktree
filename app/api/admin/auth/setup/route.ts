@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession, createSessionToken } from '@/app/lib/auth'
+import { getSession, createSessionToken, SESSION_COOKIE_NAME } from '@/app/lib/auth'
 import { completeSetup, touchLastLogin, genSecurityKey } from '@/app/lib/users'
 
 export const runtime = 'nodejs'
 
-const COOKIE_NAME = 'admin_session'
+const COOKIE_NAME = SESSION_COOKIE_NAME
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 
 // GET → suggest a fresh security key for the "use a key" option

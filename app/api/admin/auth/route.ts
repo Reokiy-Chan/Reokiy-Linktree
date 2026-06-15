@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSessionToken } from '@/app/lib/auth'
+import { createSessionToken, SESSION_COOKIE_NAME } from '@/app/lib/auth'
 import { resolveLogin, touchLastLogin, type AdminUser } from '@/app/lib/users'
 import { appendAudit } from '@/app/lib/audit'
 
 export const runtime = 'nodejs'
 
-const COOKIE_NAME = 'admin_session'
+const COOKIE_NAME = SESSION_COOKIE_NAME
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 const SETUP_MAX_AGE = 60 * 10           // 10 min — just long enough to finish setup
 

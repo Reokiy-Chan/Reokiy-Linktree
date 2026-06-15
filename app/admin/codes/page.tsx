@@ -158,42 +158,189 @@ function GiftBoxPreview({
   )
 }
 
-function CodeEditInline({ code, onSaved, onCancel }: { code: RedeemCode; onSaved: (c: RedeemCode) => void; onCancel: () => void }) {
-  const [rewardTitle, setRewardTitle] = useState(code.rewardTitle ?? '')
-  const [adminNote, setAdminNote] = useState(code.adminNote ?? code.label ?? '')
+function CodeEditFull({ code, onSaved, onCancel }: { code: RedeemCode; onSaved: (c: RedeemCode) => void; onCancel: () => void }) {
+  const [codeStr, setCodeStr]             = useState(code.code)
+  const [label, setLabel]                 = useState(code.label ?? '')
+  const [adminNote, setAdminNote]         = useState(code.adminNote ?? '')
+  const [rewardType, setRewardType]       = useState<RewardType>(code.rewardType)
+  const [rewardContent, setRewardContent] = useState(code.rewardContent)
+  const [rewardTitle, setRewardTitle]     = useState(code.rewardTitle ?? '')
+  // Gift
+  const [giftAnimation, setGiftAnimation]   = useState(code.giftAnimation ?? false)
+  const [giftStyle, setGiftStyle]           = useState<GiftStyle>(code.giftStyle ?? 'modern')
+  const [giftBoxColor, setGiftBoxColor]     = useState(code.giftBoxColor ?? '#c41428')
+  const [giftRibbonColor, setGiftRibbonColor] = useState(code.giftRibbonColor ?? '#fef0f4')
+  const [giftPattern, setGiftPattern]       = useState<GiftPattern>(code.giftPattern ?? 'none')
+  const [giftPatternColor, setGiftPatternColor] = useState(code.giftPatternColor ?? '#ffffff')
+  const [giftPatternImage, setGiftPatternImage] = useState<string | null>(code.giftPatternImage ?? null)
+  // Scratch
+  const [scratchCard, setScratchCard]       = useState(code.scratchCard ?? false)
+  const [scratchStyle, setScratchStyle]     = useState<ScratchStyle>(code.scratchStyle ?? 'lottery')
+  const [scratchCardColor, setScratchCardColor] = useState(code.scratchCardColor ?? '#2a1a2e')
+  const [scratchCardLabel, setScratchCardLabel] = useState(code.scratchCardLabel ?? '')
+  const [scratchDifficulty, setScratchDifficulty] = useState<ScratchDifficulty>(code.scratchDifficulty ?? 'normal')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+
   const fieldStyle: React.CSSProperties = {
     width: '100%', padding: '8px 11px', boxSizing: 'border-box',
     background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(196,20,40,0.2)',
     borderRadius: 7, color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: 12,
     outline: 'none', boxShadow: 'none',
   }
+  const sectionStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(196,20,40,0.12)',
+    borderRadius: 10, padding: '12px 14px',
+  }
+  const toggleStyle = (on: boolean): React.CSSProperties => ({
+    width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
+    background: on ? 'rgba(196,20,40,0.7)' : 'rgba(255,255,255,0.1)',
+    position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+  })
+
   const save = async () => {
+    if (!codeStr.trim()) { setErr('Code is required'); return }
+    if (!rewardContent.trim()) { setErr('Reward content is required'); return }
     setSaving(true); setErr('')
     const r = await fetch(`/api/admin/codes/${code.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rewardTitle: rewardTitle.trim(), adminNote: adminNote.trim() }),
+      body: JSON.stringify({
+        code: codeStr.trim().toUpperCase(),
+        label: label.trim() || codeStr.trim(),
+        adminNote: adminNote.trim(),
+        rewardType, rewardContent: rewardContent.trim(), rewardTitle: rewardTitle.trim(),
+        giftAnimation, giftStyle, giftBoxColor, giftRibbonColor, giftPattern, giftPatternColor, giftPatternImage,
+        scratchCard, scratchStyle, scratchCardColor, scratchCardLabel: scratchCardLabel.trim(), scratchDifficulty,
+      }),
     })
     const d = await r.json()
     if (r.ok) onSaved(d.code)
     else setErr(d.error ?? 'Save failed')
     setSaving(false)
   }
+
+  const lbl = (text: string) => (
+    <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>{text}</label>
+  )
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Code + label */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ flex: 1 }}>
+          {lbl('code')}
+          <input value={codeStr} onChange={e => setCodeStr(e.target.value.toUpperCase())} style={{ ...fieldStyle, fontFamily: 'monospace' }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          {lbl('admin note')}
+          <input value={adminNote} onChange={e => setAdminNote(e.target.value)} placeholder="internal note" style={fieldStyle} />
+        </div>
+      </div>
+
+      {/* Reward type */}
       <div>
-        <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>title</label>
-        <input value={rewardTitle} onChange={e => setRewardTitle(e.target.value)} style={fieldStyle} />
+        {lbl('reward type')}
+        <div style={{ display: 'flex', gap: 5 }}>
+          {(['text','link','image','fansly'] as RewardType[]).map(t => (
+            <button key={t} type="button" onClick={() => setRewardType(t)} style={{
+              flex: 1, padding: '6px 4px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
+              background: rewardType === t ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)',
+              border: `1px solid ${rewardType === t ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`,
+              color: rewardType === t ? 'var(--text)' : 'rgba(254,240,244,0.45)',
+              fontFamily: 'var(--font-body)',
+            }}>{t}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Reward title + content */}
+      <div>
+        {lbl('title (shown to user)')}
+        <input value={rewardTitle} onChange={e => setRewardTitle(e.target.value)} placeholder="e.g. Secret link" style={fieldStyle} />
       </div>
       <div>
-        <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>admin note</label>
-        <input value={adminNote} onChange={e => setAdminNote(e.target.value)} style={fieldStyle} />
+        {lbl(rewardType === 'text' ? 'message' : rewardType === 'fansly' ? 'fansly code' : 'url / content')}
+        {rewardType === 'text'
+          ? <textarea value={rewardContent} onChange={e => setRewardContent(e.target.value)} rows={3} style={{ ...fieldStyle, resize: 'vertical' }} />
+          : <input value={rewardContent} onChange={e => setRewardContent(e.target.value)} style={{ ...fieldStyle, fontFamily: rewardType === 'fansly' ? 'monospace' : undefined }} />
+        }
       </div>
+
+      {/* Gift animation */}
+      <div style={sectionStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.5)', letterSpacing: '0.08em' }}>🎁 gift animation</span>
+          <button type="button" onClick={() => setGiftAnimation(v => !v)} style={toggleStyle(giftAnimation)}>
+            <span style={{ position: 'absolute', top: 2, left: giftAnimation ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+          </button>
+        </div>
+        {giftAnimation && (
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)' }}>box color</label>
+                <input type="color" value={giftBoxColor} onChange={e => setGiftBoxColor(e.target.value)} style={{ width: '100%', marginTop: 4, height: 30 }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)' }}>ribbon color</label>
+                <input type="color" value={giftRibbonColor} onChange={e => setGiftRibbonColor(e.target.value)} style={{ width: '100%', marginTop: 4, height: 30 }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {(['modern','legacy'] as const).map(v => (
+                <button key={v} type="button" onClick={() => setGiftStyle(v)} style={{ flex: 1, padding: '5px', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: giftStyle === v ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)', border: `1px solid ${giftStyle === v ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`, color: 'var(--text)', fontFamily: 'var(--font-body)' }}>{v}</button>
+              ))}
+            </div>
+            <select value={giftPattern} onChange={e => setGiftPattern(e.target.value as GiftPattern)} style={fieldStyle}>
+              {GIFT_PATTERNS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+            {giftPattern !== 'none' && giftPattern !== 'custom' && (
+              <div>
+                <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)' }}>pattern color</label>
+                <input type="color" value={giftPatternColor} onChange={e => setGiftPatternColor(e.target.value)} style={{ width: '100%', marginTop: 4, height: 30 }} />
+              </div>
+            )}
+            <GiftBoxPreview boxColor={giftBoxColor} ribbonColor={giftRibbonColor} pattern={giftPattern} patternColor={giftPatternColor} patternImage={giftPatternImage} />
+          </div>
+        )}
+      </div>
+
+      {/* Scratch card */}
+      <div style={sectionStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.5)', letterSpacing: '0.08em' }}>🪄 scratch card</span>
+          <button type="button" onClick={() => setScratchCard(v => !v)} style={toggleStyle(scratchCard)}>
+            <span style={{ position: 'absolute', top: 2, left: scratchCard ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+          </button>
+        </div>
+        {scratchCard && (
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {(['lottery','classic'] as const).map(v => (
+                <button key={v} type="button" onClick={() => setScratchStyle(v)} style={{ flex: 1, padding: '5px', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: scratchStyle === v ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)', border: `1px solid ${scratchStyle === v ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`, color: 'var(--text)', fontFamily: 'var(--font-body)' }}>{v}</button>
+              ))}
+            </div>
+            <div>
+              <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)' }}>background color</label>
+              <input type="color" value={scratchCardColor} onChange={e => setScratchCardColor(e.target.value)} style={{ width: '100%', marginTop: 4, height: 30 }} />
+            </div>
+            <div>
+              <label style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)' }}>overlay text (optional)</label>
+              <input value={scratchCardLabel} onChange={e => setScratchCardLabel(e.target.value)} placeholder="✦ scratch to reveal ✦" style={fieldStyle} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+              {SCRATCH_DIFFICULTIES.map(d => (
+                <button key={d.value} type="button" onClick={() => setScratchDifficulty(d.value as ScratchDifficulty)} style={{ padding: '6px', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: scratchDifficulty === d.value ? 'rgba(196,20,40,0.2)' : 'rgba(255,255,255,0.025)', border: `1px solid ${scratchDifficulty === d.value ? 'rgba(196,20,40,0.5)' : 'rgba(255,255,255,0.07)'}`, color: 'var(--text)', fontFamily: 'var(--font-body)' }}>{d.label}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {err && <div style={{ ...S, fontSize: 12, color: '#f87171' }}>{err}</div>}
       <div style={{ display: 'flex', gap: 6 }}>
         <button type="button" onClick={onCancel} style={{ ...S, flex: 1, padding: '8px 0', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, color: 'rgba(254,240,244,0.5)', fontSize: 12, cursor: 'pointer' }}>cancel</button>
-        <button type="button" onClick={save} disabled={saving} style={{ ...S, flex: 2, padding: '8px 0', background: 'rgba(196,20,40,0.2)', border: '1px solid rgba(196,20,40,0.4)', borderRadius: 7, color: 'var(--text)', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>{saving ? 'saving…' : 'save'}</button>
+        <button type="button" onClick={save} disabled={saving} style={{ ...S, flex: 2, padding: '8px 0', background: 'rgba(196,20,40,0.2)', border: '1px solid rgba(196,20,40,0.4)', borderRadius: 7, color: 'var(--text)', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>{saving ? 'saving…' : 'save changes'}</button>
       </div>
     </div>
   )
@@ -240,7 +387,7 @@ function CodeDetailModal({
         </div>
 
         {editing ? (
-          <CodeEditInline code={code} onSaved={c => { onUpdated(c); setEditing(false) }} onCancel={() => setEditing(false)} />
+          <CodeEditFull code={code} onSaved={c => { onUpdated(c); setEditing(false) }} onCancel={() => setEditing(false)} />
         ) : (
           <CodeDetailView code={code} onDelete={handleDelete} deleting={deleting} />
         )}
