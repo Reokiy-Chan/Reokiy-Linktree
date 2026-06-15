@@ -224,8 +224,6 @@ export default function Forreo() {
   return (
     <main style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden', background: '#030009' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400;1,600&family=Pinyon+Script&family=Space+Mono:wght@400&display=swap');
-
         @keyframes heart-rise {
           0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
           100% { transform: translateY(-110vh) scale(0.2) rotate(var(--rot)); opacity: 0; }

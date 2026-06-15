@@ -88,10 +88,14 @@ export default function OverviewPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/admin/stats')
-      .then(r => { if (r.status === 401) { router.push('/admin/login'); return null } return r.json() })
-      .then(d => { if (d) { setStats(d); setLoading(false) } })
-      .catch(() => setLoading(false))
+    const load = () =>
+      fetch('/api/admin/stats')
+        .then(r => { if (r.status === 401) { router.push('/admin/login'); return null } return r.json() })
+        .then(d => { if (d) { setStats(d); setLoading(false) } })
+        .catch(() => setLoading(false))
+    load()
+    const id = setInterval(() => { if (!document.hidden) load() }, 12_000)
+    return () => clearInterval(id)
   }, [router])
 
   if (loading) return (
@@ -114,11 +118,17 @@ export default function OverviewPage() {
     <div style={{ maxWidth: 1100, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: 22 }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: 'var(--text)', lineHeight: 1.1 }}>
-          overview
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 26, color: 'var(--text)', lineHeight: 1.1 }}>
+            overview
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px #4ade80', animation: 'pulse-dot 2s ease-in-out infinite' }} />
+            <span style={{ ...S, fontSize: 10, color: 'rgba(74,222,128,0.6)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>live</span>
+          </div>
         </div>
         <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.3)', letterSpacing: '0.1em', marginTop: 4, textTransform: 'uppercase' }}>
-          all-time summary
+          all-time summary · auto-refreshes every 12s
         </div>
       </div>
 

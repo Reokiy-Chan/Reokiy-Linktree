@@ -47,6 +47,7 @@ export interface AdminUser {
   createdAt: string
   createdBy?: string
   lastLogin?: string
+  lastActive?: string
   webauthnCredentials?: WebAuthnCredential[]
   pronouns?: string
   bio?: string
@@ -67,6 +68,7 @@ export interface SafeUser {
   pendingMessage?: PendingMessage
   createdAt: string
   lastLogin?: string
+  lastActive?: string
   webauthnCredentials?: {
     id: string
     name: string
@@ -85,7 +87,7 @@ export function toSafeUser(u: AdminUser): SafeUser {
     permissions: u.permissions, isRoot: u.isRoot,
     suspended: u.suspended,
     pendingMessage: u.pendingMessage,
-    createdAt: u.createdAt, lastLogin: u.lastLogin,
+    createdAt: u.createdAt, lastLogin: u.lastLogin, lastActive: u.lastActive,
     webauthnCredentials: u.webauthnCredentials?.map(c => ({
       id: c.id, name: c.name, createdAt: c.createdAt, transports: c.transports,
     })),
@@ -395,6 +397,11 @@ export async function setRootSecurityKey(key: string | null): Promise<void> {
 export async function touchLastLogin(id: string): Promise<void> {
   const user = await getUser(id)
   if (user) await writeOne({ ...user, lastLogin: new Date().toISOString() })
+}
+
+export async function touchLastActive(id: string): Promise<void> {
+  const user = await getUser(id)
+  if (user) await writeOne({ ...user, lastActive: new Date().toISOString() })
 }
 
 // ─── WebAuthn credential management ──────────────────────────────────────────

@@ -23,6 +23,10 @@ export default function ParticlesBg() {
     resize()
     window.addEventListener('resize', resize)
 
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const maxParticles = reducedMotion ? 0 : 55
+    const spawnEvery = 5
+
     const particles: Particle[] = []
     let frame = 0, animId: number
 
@@ -39,7 +43,7 @@ export default function ParticlesBg() {
     const tick = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       frame++
-      if (frame % 4 === 0 && particles.length < 120) spawn()
+      if (frame % spawnEvery === 0 && particles.length < maxParticles) spawn()
 
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i]
@@ -55,8 +59,18 @@ export default function ParticlesBg() {
       animId = requestAnimationFrame(tick)
     }
 
-    tick()
-    return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize) }
+    const onVisibility = () => {
+      if (document.hidden) cancelAnimationFrame(animId)
+      else animId = requestAnimationFrame(tick)
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    if (!reducedMotion) tick()
+    return () => {
+      cancelAnimationFrame(animId)
+      window.removeEventListener('resize', resize)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [palette])
 
   return (

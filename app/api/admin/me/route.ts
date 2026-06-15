@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession, verifyPassword, hashPassword } from '@/app/lib/auth'
-import { getUser, ensureRoot, toSafeUser, PERMISSIONS, updateUser } from '@/app/lib/users'
+import { getUser, ensureRoot, toSafeUser, PERMISSIONS, updateUser, touchLastActive } from '@/app/lib/users'
 import { appendAudit } from '@/app/lib/audit'
 
 export const runtime = 'nodejs'
@@ -15,6 +15,8 @@ export async function GET(req: NextRequest) {
   const user = session.uid === 'root' ? await ensureRoot() : await getUser(session.uid)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  touchLastActive(user.id).catch(() => {})
+
   return NextResponse.json({
     user: toSafeUser(user),
     isRoot: !!user.isRoot,
@@ -24,7 +26,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const session = await getSession(req)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session || session.setup) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
   const user = await getUser(session.uid)   // ✅ corregido: uid, no userId

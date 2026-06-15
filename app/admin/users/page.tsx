@@ -11,8 +11,18 @@ interface SafeUser {
   authMethod: 'password' | 'key' | 'webauthn'; pendingSetup: boolean
   permissions: Permission[]; isRoot?: boolean; suspended?: boolean
   pendingMessage?: PendingMessage
-  createdAt: string; lastLogin?: string
+  createdAt: string; lastLogin?: string; lastActive?: string
 }
+
+function onlineStatus(lastActive?: string): 'online' | 'away' | 'offline' {
+  if (!lastActive) return 'offline'
+  const ms = Date.now() - new Date(lastActive).getTime()
+  if (ms < 3 * 60_000) return 'online'
+  if (ms < 30 * 60_000) return 'away'
+  return 'offline'
+}
+
+const ONLINE_COLOR = { online: '#4ade80', away: '#facc15', offline: 'rgba(255,255,255,0.18)' } as const
 
 const S: React.CSSProperties = { fontFamily: 'var(--font-body)' }
 const FIELD: React.CSSProperties = {
@@ -236,12 +246,21 @@ function UserDetailModal({ user, me, onClose, onEdit, onOtp, onDeleted, onUpdate
 
         {/* Avatar + name */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
-          {user.avatar
-            ? <img src={user.avatar} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(196,20,40,0.3)', flexShrink: 0 }} />
-            : <div style={{ width: 56, height: 56, borderRadius: '50%', flexShrink: 0, background: user.isRoot ? 'linear-gradient(135deg,#c41428,#e8195c)' : 'rgba(196,20,40,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', border: user.isRoot ? '2px solid rgba(255,215,0,0.4)' : '2px solid rgba(196,20,40,0.25)' }}>
-                {user.isRoot ? '👑' : initials}
-              </div>
-          }
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            {user.avatar
+              ? <img src={user.avatar} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(196,20,40,0.3)', display: 'block' }} />
+              : <div style={{ width: 56, height: 56, borderRadius: '50%', background: user.isRoot ? 'linear-gradient(135deg,#c41428,#e8195c)' : 'rgba(196,20,40,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', border: user.isRoot ? '2px solid rgba(255,215,0,0.4)' : '2px solid rgba(196,20,40,0.25)' }}>
+                  {user.isRoot ? '👑' : initials}
+                </div>
+            }
+            <div style={{
+              position: 'absolute', bottom: 1, right: 1,
+              width: 11, height: 11, borderRadius: '50%',
+              background: ONLINE_COLOR[onlineStatus(user.lastActive)],
+              border: '2px solid #0a0010',
+              boxShadow: onlineStatus(user.lastActive) === 'online' ? '0 0 7px #4ade80' : 'none',
+            }} title={onlineStatus(user.lastActive)} />
+          </div>
           <div>
             <div style={{ ...S, fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>{user.name}</div>
             <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.4)', marginTop: 2 }}>@{user.username}</div>
@@ -371,7 +390,11 @@ export default function UsersPage() {
       .catch(e => { setAccessError(String(e)); setLoading(false) })
   }, [router])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    const id = setInterval(() => { if (!document.hidden) load() }, 20_000)
+    return () => clearInterval(id)
+  }, [load])
 
   useEffect(() => {
     fetch('/api/admin/me')
@@ -436,12 +459,21 @@ export default function UsersPage() {
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(196,20,40,0.4)'; e.currentTarget.style.background = 'rgba(196,20,40,0.05)' }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = u.isRoot ? 'rgba(255,215,0,0.22)' : 'rgba(255,255,255,0.07)'; e.currentTarget.style.background = u.isRoot ? 'rgba(255,215,0,0.05)' : 'rgba(255,255,255,0.025)' }}
               >
-                {u.avatar
-                  ? <img src={u.avatar} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(196,20,40,0.25)', flexShrink: 0 }} />
-                  : <div style={{ width: 48, height: 48, borderRadius: '50%', background: u.isRoot ? 'linear-gradient(135deg,#c41428,#e8195c)' : 'rgba(196,20,40,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#fff', flexShrink: 0 }}>
-                      {u.isRoot ? '👑' : initials}
-                    </div>
-                }
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  {u.avatar
+                    ? <img src={u.avatar} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(196,20,40,0.25)', display: 'block' }} />
+                    : <div style={{ width: 48, height: 48, borderRadius: '50%', background: u.isRoot ? 'linear-gradient(135deg,#c41428,#e8195c)' : 'rgba(196,20,40,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#fff' }}>
+                        {u.isRoot ? '👑' : initials}
+                      </div>
+                  }
+                  <div style={{
+                    position: 'absolute', bottom: 1, right: 1,
+                    width: 10, height: 10, borderRadius: '50%',
+                    background: ONLINE_COLOR[onlineStatus(u.lastActive)],
+                    border: '2px solid #050007',
+                    boxShadow: onlineStatus(u.lastActive) === 'online' ? '0 0 6px #4ade80' : 'none',
+                  }} />
+                </div>
                 <div>
                   <div style={{ ...S, fontSize: 12, color: 'var(--text)', fontWeight: 500 }}>{u.name}</div>
                   <div style={{ ...S, fontSize: 12, color: 'rgba(254,240,244,0.35)', marginTop: 2 }}>@{u.username}</div>

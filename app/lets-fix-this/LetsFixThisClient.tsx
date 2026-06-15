@@ -5,8 +5,6 @@ import { useState, useEffect } from 'react'
 const SECRET_CODE = 'silvy'
 
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400;1,600&family=Pinyon+Script&family=Space+Mono:wght@400&display=swap');
-
   @keyframes gate-in {
     from { opacity: 0; transform: translateY(24px) scale(0.97); }
     to   { opacity: 1; transform: translateY(0) scale(1); }

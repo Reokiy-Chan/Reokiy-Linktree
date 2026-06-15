@@ -97,10 +97,14 @@ export default function SessionsPage() {
   const [page, setPage] = useState(0)
 
   useEffect(() => {
-    fetch('/api/admin/stats')
-      .then(r => { if (r.status === 401) { router.replace('/admin/login'); return null } return r.json() as Promise<Stats> })
-      .then(d => { if (d) { setStats(d); setLoading(false) } })
-      .catch(() => router.replace('/admin/login'))
+    const load = () =>
+      fetch('/api/admin/stats')
+        .then(r => { if (r.status === 401) { router.replace('/admin/login'); return null } return r.json() as Promise<Stats> })
+        .then(d => { if (d) { setStats(d); setLoading(false) } })
+        .catch(() => router.replace('/admin/login'))
+    load()
+    const id = setInterval(() => { if (!document.hidden) load() }, 15_000)
+    return () => clearInterval(id)
   }, [router])
 
   if (loading) return <div style={{ ...S, fontSize: 14, color: 'rgba(254,240,244,0.3)', paddingTop: 60, textAlign: 'center' }}>loading…</div>
