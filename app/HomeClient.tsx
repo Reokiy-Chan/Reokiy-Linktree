@@ -9,6 +9,7 @@ import { useDiscord } from './hooks/useDiscord'
 const ParticlesBg = dynamic(() => import('./components/ParticlesBg'), { ssr: false })
 const AboutMeModal = dynamic(() => import('./components/AboutMeModal'), { ssr: false })
 const BirthdayConfetti = dynamic(() => import('./components/BirthdayConfetti'), { ssr: false })
+const PartnerPopup = dynamic(() => import('./components/PartnerPopup'), { ssr: false })
 
 /* ─── Icons ──────────────────────────────────────────────── */
 const Icons = {
@@ -56,7 +57,7 @@ const LINKS = [
   { label: 'fansly', sublabel: '18+ content ♥', href: 'https://fansly.com/Reokiy/posts', icon: 'Fansly' as const, accent: '#e8195c' },
   { label: 'ko-fi', sublabel: 'support me ♡', href: 'https://ko-fi.com/reokiy14', icon: 'Kofi' as const, accent: '#FF5E5B' },
   { label: 'throne', sublabel: 'my wishlist', href: 'https://throne.com/reokiy14', icon: 'Throne' as const, accent: '#9b59b6' },
-  { label: 'lovense', sublabel: 'toys i use ♥', href: 'https://www.lovense.com/r/q8xwnc', icon: 'Lovense' as const, accent: '#ff2d78' },
+  { label: 'lovense', sublabel: 'partner ♥', href: 'https://www.lovense.com/r/q8xwnc', icon: 'Lovense' as const, accent: '#ff2d78', confirmMessage: 'I partnered with Lovense. Please use this link to support me.' },
 ]
 
 
@@ -70,6 +71,7 @@ export default function Home() {
   const [raffleCount, setRaffleCount] = useState(0)
   const [raffleHovered, setRaffleHovered] = useState(false)
   const [isBirthday, setIsBirthday] = useState(false)
+  const [confirmLink, setConfirmLink] = useState<{ href: string; message: string } | null>(null)
   const { avatarUrl } = useDiscord()
 
   useEffect(() => {
@@ -218,6 +220,12 @@ export default function Home() {
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={e => {
+                    if (link.confirmMessage) {
+                      e.preventDefault()
+                      setConfirmLink({ href: link.href, message: link.confirmMessage })
+                    }
+                  }}
                   onMouseEnter={() => setHoveredLink(i)}
                   onMouseLeave={() => setHoveredLink(null)}
                   style={{
@@ -353,6 +361,15 @@ export default function Home() {
       </div>
 
       <AboutMeModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <PartnerPopup
+        open={!!confirmLink}
+        message={confirmLink?.message ?? ''}
+        onClose={() => setConfirmLink(null)}
+        onContinue={() => {
+          if (confirmLink) window.open(confirmLink.href, '_blank', 'noopener,noreferrer')
+          setConfirmLink(null)
+        }}
+      />
     </main>
   )
 }
