@@ -58,13 +58,18 @@ export async function appendAudit(entry: Omit<AuditEntry, 'id' | 'ts'>): Promise
   }
 }
 
+function safeParse(v: unknown): AuditEntry | null {
+  if (!v) return null
+  if (typeof v === 'object') return v as AuditEntry
+  if (typeof v === 'string') { try { return JSON.parse(v) as AuditEntry } catch { return null } }
+  return null
+}
+
 export async function listAudit(limit = 200): Promise<AuditEntry[]> {
   if (USE_KV) {
     const redis = await getRedis()
-    const raw = await redis.lrange(KV_KEY, 0, limit - 1) as string[]
-    return raw.map(r => {
-      try { return JSON.parse(r) as AuditEntry } catch { return null }
-    }).filter(Boolean) as AuditEntry[]
+    const raw = await redis.lrange(KV_KEY, 0, limit - 1) as unknown[]
+    return raw.map(safeParse).filter(Boolean) as AuditEntry[]
   }
   return fsRead().slice(0, limit)
 }

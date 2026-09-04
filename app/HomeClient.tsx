@@ -8,6 +8,7 @@ import { useDiscord } from './hooks/useDiscord'
 
 const ParticlesBg = dynamic(() => import('./components/ParticlesBg'), { ssr: false })
 const AboutMeModal = dynamic(() => import('./components/AboutMeModal'), { ssr: false })
+const BirthdayConfetti = dynamic(() => import('./components/BirthdayConfetti'), { ssr: false })
 
 /* ─── Icons ──────────────────────────────────────────────── */
 const Icons = {
@@ -41,6 +42,11 @@ const Icons = {
       <path d="M12 1 3 5v6c0 5.25 3.75 10.15 9 11.35C17.25 21.15 21 16.25 21 11V5l-9-4zm0 4 5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/>
     </svg>
   ),
+  Lovense: () => (
+    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+      <path d="M12 21.35c-.34 0-.68-.13-.94-.39l-1.06-1.03C5.4 15.66 2 12.36 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.86-3.4 7.16-7.99 11.44l-1.07 1.02c-.26.26-.6.39-.94.39z"/>
+    </svg>
+  ),
 }
 
 const LINKS = [
@@ -50,6 +56,7 @@ const LINKS = [
   { label: 'fansly', sublabel: '18+ content ♥', href: 'https://fansly.com/Reokiy/posts', icon: 'Fansly' as const, accent: '#e8195c' },
   { label: 'ko-fi', sublabel: 'support me ♡', href: 'https://ko-fi.com/reokiy14', icon: 'Kofi' as const, accent: '#FF5E5B' },
   { label: 'throne', sublabel: 'my wishlist', href: 'https://throne.com/reokiy14', icon: 'Throne' as const, accent: '#9b59b6' },
+  { label: 'lovense', sublabel: 'toys i use ♥', href: 'https://www.lovense.com/r/q8xwnc', icon: 'Lovense' as const, accent: '#ff2d78' },
 ]
 
 
@@ -62,7 +69,13 @@ export default function Home() {
   const [aboutOpen, setAboutOpen] = useState(false)
   const [raffleCount, setRaffleCount] = useState(0)
   const [raffleHovered, setRaffleHovered] = useState(false)
+  const [isBirthday, setIsBirthday] = useState(false)
   const { avatarUrl } = useDiscord()
+
+  useEffect(() => {
+    const today = new Date()
+    setIsBirthday(today.getDate() === 4 && today.getMonth() === 8) // 04/09
+  }, [])
 
   useEffect(() => {
     setStars(Array.from({ length: 20 }, (_, i) => ({
@@ -85,6 +98,7 @@ export default function Home() {
   return (
     <main style={{ position: 'relative' }}>
       <ParticlesBg />
+      {isBirthday && <BirthdayConfetti />}
 
       {stars.map(s => (
         <span key={s.id} style={{
@@ -118,14 +132,52 @@ export default function Home() {
                 <img src="/images/logo.png" alt="logo" style={{ width: '120%', height: '120%', objectFit: 'cover', objectPosition: 'center 55%', marginTop: 2 }} />
               </div>
             )}
+            {isBirthday && (
+              <>
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute', top: -22, left: -6, fontSize: 34,
+                    transform: 'rotate(-24deg)', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))',
+                    animation: 'float 3s ease-in-out infinite',
+                  }}
+                >🎉</span>
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute', top: -18, right: -10, fontSize: 30,
+                    transform: 'rotate(18deg)', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))',
+                    animation: 'float 3.4s ease-in-out infinite 0.3s',
+                  }}
+                >🎈</span>
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute', bottom: -10, left: -14, fontSize: 30,
+                    filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))',
+                    animation: 'float 2.8s ease-in-out infinite 0.5s',
+                  }}
+                >🎂</span>
+              </>
+            )}
           </div>
 
           {/* Name */}
           <h1 className="animate-glitch site-title">reokiy</h1>
 
+          {isBirthday && (
+            <div style={{
+              fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 14,
+              color: 'var(--primary)', marginTop: -6, marginBottom: 4,
+              textAlign: 'center', letterSpacing: '0.03em',
+            }}>
+              🎂 happy birthday to me ♡ thank you for all the love 🎉
+            </div>
+          )}
+
           {/* Tags */}
           <div className="tags-row">
-            {['lewd elf', 'vrchat', '18+', 'dumb & cute'].map(tag => (
+            {[...(isBirthday ? ['birthday girl 🎂'] : []), 'lewd elf', 'vrchat', '18+', 'dumb & cute'].map(tag => (
               <span key={tag} className="tag">{tag}</span>
             ))}
           </div>
