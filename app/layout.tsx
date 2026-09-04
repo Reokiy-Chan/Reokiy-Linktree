@@ -5,6 +5,7 @@ import { ThemeProvider } from './components/ThemeProvider'
 import TypewriterTitle from './components/TypewriterTitle'
 import PageTransition from './components/PageTransition'
 import MusicPlayer from './components/MusicPlayerLazy'
+import { getBackgroundImages } from './lib/backgrounds'
 
 const TrackingBeacon = dynamic(() => import('./components/TrackingBeacon'))
 const CaptchaGate = dynamic(() => import('./components/CaptchaGate'))
@@ -46,6 +47,8 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const backgroundImages = getBackgroundImages()
+
   return (
     <html lang="en">
       <head>
@@ -56,7 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href="/images/logo.png" type="image/png" />
       </head>
       <body>
-        <ThemeProvider>
+        <ThemeProvider images={backgroundImages}>
           <TypewriterTitle />
           <TrackingBeacon />
           <CaptchaGate />

@@ -17,8 +17,11 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 export const useTheme = () => useContext(ThemeContext)
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+const FALLBACK_BG = '/images/logo.png'
+
+export function ThemeProvider({ children, images }: { children: React.ReactNode; images: string[] }) {
   const [bgIndex, setBgIndex] = useState(0)
+  const [bgUrl, setBgUrl] = useState(images[0] ?? FALLBACK_BG)
   const [mounted, setMounted] = useState(false)
   const [bgReady, setBgReady] = useState(false)
   const bgRef = useRef<HTMLDivElement>(null)
@@ -28,13 +31,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setBgIndex(idx)
     setMounted(true)
 
+    // Fondo e imagen se eligen de forma independiente: cualquier imagen en
+    // public/images/bg se considera un fondo válido, sin atarla a un color.
+    const chosenBg = images.length > 0
+      ? images[Math.floor(Math.random() * images.length)]
+      : FALLBACK_BG
+    setBgUrl(chosenBg)
+
     // Precargar la imagen elegida antes de mostrarla
     // Evita el flash donde el fondo aparece a medias cargado
     const img = new Image()
     img.onload = () => setBgReady(true)
     img.onerror = () => setBgReady(true) // mostrar igual si falla
-    img.src = PALETTES[idx].bg
-  }, [])
+    img.src = chosenBg
+  }, [images])
 
   const palette = PALETTES[bgIndex]
 
@@ -62,7 +72,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
         Ahora: el div existe desde el SSR con opacity:0,
         y hace fade-in solo cuando la imagen terminó de cargar.
-        suppressHydrationWarning porque bgIndex cambia entre SSR (0) y cliente (random).
+        suppressHydrationWarning porque bgUrl cambia entre SSR (primera imagen) y cliente (random).
       */}
       <div
         ref={bgRef}
@@ -71,7 +81,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         style={{
           position: 'fixed',
           inset: 0,
-          backgroundImage: `url(${palette.bg})`,
+          backgroundImage: `url(${bgUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           filter: 'brightness(0.18) saturate(1.5) blur(3px)',

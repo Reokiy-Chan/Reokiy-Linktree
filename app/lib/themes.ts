@@ -1,5 +1,4 @@
 export interface ColorPalette {
-  bg: string
   primary: string
   primaryRgb: string
   primaryDim: string
@@ -15,7 +14,6 @@ export interface ColorPalette {
 export const PALETTES: ColorPalette[] = [
   {
     name: 'crimson',
-    bg: '/images/bg1.png',
     primary: '#c41428',
     primaryRgb: '196,20,40',
     primaryDim: 'rgba(196,20,40,0.14)',
@@ -28,7 +26,6 @@ export const PALETTES: ColorPalette[] = [
   },
   {
     name: 'violet',
-    bg: '/images/bg2.png',
     primary: '#7c3aed',
     primaryRgb: '124,58,237',
     primaryDim: 'rgba(124,58,237,0.14)',
@@ -41,7 +38,6 @@ export const PALETTES: ColorPalette[] = [
   },
   {
     name: 'ocean',
-    bg: '/images/bg3.png',
     primary: '#0ea5e9',
     primaryRgb: '14,165,233',
     primaryDim: 'rgba(14,165,233,0.14)',
@@ -54,7 +50,6 @@ export const PALETTES: ColorPalette[] = [
   },
   {
     name: 'emerald',
-    bg: '/images/bg4.png',
     primary: '#10b981',
     primaryRgb: '16,185,129',
     primaryDim: 'rgba(16,185,129,0.14)',
@@ -67,7 +62,6 @@ export const PALETTES: ColorPalette[] = [
   },
   {
     name: 'amber',
-    bg: '/images/bg5.png',
     primary: '#f59e0b',
     primaryRgb: '245,158,11',
     primaryDim: 'rgba(245,158,11,0.14)',
@@ -80,7 +74,6 @@ export const PALETTES: ColorPalette[] = [
   },
   {
     name: 'sakura',
-    bg: '/images/bg6.png',
     primary: '#ec4899',
     primaryRgb: '236,72,153',
     primaryDim: 'rgba(236,72,153,0.14)',
@@ -93,7 +86,6 @@ export const PALETTES: ColorPalette[] = [
   },
   {
     name: 'cyber',
-    bg: '/images/bg7.png',
     primary: '#14b8a6',
     primaryRgb: '20,184,166',
     primaryDim: 'rgba(20,184,166,0.14)',
