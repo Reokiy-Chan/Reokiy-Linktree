@@ -9,6 +9,7 @@ export type AuditAction =
   | 'user.resetOtp' | 'user.requirePasswordChange' | 'user.sendMessage'
   | 'code.create' | 'code.delete'
   | 'raffle.create' | 'raffle.update' | 'raffle.delete' | 'raffle.pick'
+  | 'fansly.update'
   | 'account.update' | 'account.password'
   | 'webauthn.register' | 'webauthn.delete'
   | 'login.success' | 'login.fail'

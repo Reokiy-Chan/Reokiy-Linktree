@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import DiscordStatus from './components/DiscordStatus'
 import { useDiscord } from './hooks/useDiscord'
+import FanslyLiveBanner, { useFanslyLive, trackLiveClick } from './components/FanslyLiveBanner'
 
 const ParticlesBg = dynamic(() => import('./components/ParticlesBg'), { ssr: false })
 const AboutMeModal = dynamic(() => import('./components/AboutMeModal'), { ssr: false })
@@ -73,6 +74,11 @@ export default function Home() {
   const [isBirthday, setIsBirthday] = useState(false)
   const [confirmLink, setConfirmLink] = useState<{ href: string; message: string } | null>(null)
   const { avatarUrl } = useDiscord()
+  const fansly = useFanslyLive()
+  // While live, every Fansly link goes straight to the stream
+  const liveRedirect = !!(fansly?.isLive && fansly.redirectWhenLive)
+  const fanslyHref = (href: string) => liveRedirect && href.includes('fansly.com') ? fansly!.url : href
+  const onFanslyClick = (href: string) => { if (liveRedirect && href.includes('fansly.com')) trackLiveClick(fansly) }
 
   useEffect(() => {
     const today = new Date()
@@ -187,6 +193,8 @@ export default function Home() {
           {/* Bio */}
           <p className="bio">hey i&apos;m reokiy, your lewd dumb elf<br />check out my links :3</p>
 
+          <FanslyLiveBanner status={fansly} />
+
           {/* Social card */}
           <div className="card" style={{ marginBottom: 16 }}>
             <div style={{ position: 'absolute', top: -40, right: -40, width: 120, height: 120, borderRadius: '50%', background: 'radial-gradient(circle, rgba(var(--primary-rgb),0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
@@ -200,7 +208,7 @@ export default function Home() {
               ]).map(({ icon, color, label, href }) => {
                 const Icon = Icons[icon]
                 return (
-                  <a key={icon} href={href} target="_blank" rel="noopener noreferrer" title={label} className="social-icon-btn" style={{ '--accent': color } as React.CSSProperties}>
+                  <a key={icon} href={fanslyHref(href)} onClick={() => onFanslyClick(href)} target="_blank" rel="noopener noreferrer" title={label} className="social-icon-btn" style={{ '--accent': color } as React.CSSProperties}>
                     <Icon />
                   </a>
                 )
@@ -217,10 +225,11 @@ export default function Home() {
               return (
                 <a
                   key={i}
-                  href={link.href}
+                  href={fanslyHref(link.href)}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={e => {
+                    onFanslyClick(link.href)
                     if (link.confirmMessage) {
                       e.preventDefault()
                       setConfirmLink({ href: link.href, message: link.confirmMessage })

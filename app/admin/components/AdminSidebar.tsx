@@ -13,6 +13,7 @@ const NAV = [
   { href: '/admin/sessions', label: 'Sessions', icon: '⊞' },
   { href: '/admin/codes', label: 'Codes', icon: '⊛' },
   { href: '/admin/raffles', label: 'Giveaways', icon: '🎲' },
+  { href: '/admin/fansly', label: 'Fansly Live', icon: '📺' },
   { href: '/admin/settings', label: 'Settings', icon: '⚙' },
   { href: '/admin/users', label: 'Users', icon: '👤' },
   { href: '/admin/audit', label: 'Audit', icon: '📋' },
